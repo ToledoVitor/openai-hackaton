@@ -13,7 +13,7 @@ button { font: inherit; }
 
 .barra-superior {
   position: fixed;
-  z-index: 2;
+  z-index: 8;
   top: 20px;
   left: 24px;
   right: 24px;
@@ -22,11 +22,11 @@ button { font: inherit; }
   align-items: center;
   gap: 32px;
   padding: 12px 18px;
+  overflow: visible;
   border: 2px solid rgba(255, 255, 255, .78);
   border-radius: 24px;
   background: rgba(255, 253, 247, .92);
   box-shadow: 0 22px 70px rgba(20, 71, 69, .18), inset 0 0 0 1px rgba(22, 141, 130, .06);
-  backdrop-filter: blur(22px);
 }
 
 .marca { display: flex; align-items: center; gap: 11px; min-width: 185px; }
@@ -40,12 +40,12 @@ button { font: inherit; }
 .indicadores span { color: #789095; font-size: 10px; text-transform: uppercase; letter-spacing: 1.1px; }
 .indicadores strong { margin-top: 4px; font-size: 14px; }
 .relogio { color: #537176; font-size: 12px; font-weight: 700; white-space: nowrap; }
-.audio-menu { position: relative; }
+.audio-menu { position: relative; margin-left: auto; }
 .audio-toggle { display: flex; align-items: center; gap: 6px; padding: 8px 11px; border: 0; border-radius: 999px; color: #315d62; background: rgba(22,141,130,.1); cursor: pointer; font-size: 11px; font-weight: 800; white-space: nowrap; }
 .audio-toggle span { display: grid; width: 18px; height: 18px; place-items: center; border-radius: 50%; color: white; background: #168d82; font-size: 11px; }
 .audio-toggle:hover { color: white; background: #168d82; }
 .audio-toggle:hover span { color: #168d82; background: white; }
-.audio-painel { position: absolute; top: calc(100% + 17px); right: 0; width: 270px; padding: 16px; border: 2px solid rgba(255,255,255,.82); border-radius: 22px; background: rgba(255,253,247,.97); box-shadow: 0 22px 60px rgba(20,71,69,.24), inset 0 0 0 1px rgba(22,141,130,.08); backdrop-filter: blur(22px); }
+.audio-painel { position: fixed; top: 96px; right: 36px; z-index: 9; width: 270px; padding: 16px; border: 2px solid rgba(255,255,255,.82); border-radius: 22px; background: rgba(255,253,247,.97); box-shadow: 0 22px 60px rgba(20,71,69,.24), inset 0 0 0 1px rgba(22,141,130,.08); }
 .audio-painel::before { position: absolute; top: -7px; right: 22px; width: 12px; height: 12px; border: 2px solid rgba(255,255,255,.82); border-right: 0; border-bottom: 0; background: rgba(255,253,247,.97); content: ""; transform: rotate(45deg); }
 .audio-painel-cabecalho { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
 .audio-painel-cabecalho strong, .audio-painel-cabecalho small { display: block; }
@@ -111,8 +111,6 @@ button { font: inherit; }
   .barra-superior { top: 10px; left: 10px; right: 10px; min-height: 58px; padding: 10px 12px; }
   .marca { min-width: 0; }
   .marca small, .indicadores div:not(:nth-child(2)), .relogio { display: none; }
-  .audio-toggle { padding: 7px 9px; font-size: 10px; }
-  .audio-painel { top: calc(100% + 14px); width: min(270px, calc(100vw - 20px)); }
   .indicadores { margin-left: auto; margin-right: 0; }
   .projeto { left: 10px; bottom: 10px; width: calc(100vw - 20px); padding: 16px; }
   .projeto p { min-height: 0; }
@@ -285,9 +283,9 @@ button { font: inherit; }
 
 .entrada-cartao h1 { margin: 10px 0 7px; font-size: clamp(27px, 3vw, 38px); line-height: 1.03; letter-spacing: -1.3px; }
 .entrada-cartao p { margin: 0 0 22px; color: #628084; font-size: 13px; line-height: 1.5; }
-.entrada-cartao > label { display: block; margin-bottom: 7px; font-size: 11px; font-weight: 850; }
+.entrada-cartao label { display: block; margin-bottom: 7px; font-size: 11px; font-weight: 850; }
 
-.entrada-cartao input[type="text"] {
+.entrada-cartao input {
   width: 100%;
   height: 54px;
   padding: 0 16px;
@@ -301,16 +299,8 @@ button { font: inherit; }
   transition: border-color .18s ease, box-shadow .18s ease;
 }
 
-.entrada-cartao input[type="text"]:focus { border-color: #21a292; box-shadow: 0 0 0 5px rgba(33, 162, 146, .13); }
-.entrada-cartao input[type="text"]::placeholder { color: #9aafad; }
-.entrada-idioma { min-width: 0; margin: 15px 0 0; padding: 0; border: 0; }
-.entrada-idioma legend { margin-bottom: 7px; padding: 0; font-size: 11px; font-weight: 850; }
-.entrada-idioma-opcoes { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border: 2px solid #d6e8e3; border-radius: 15px; background: #edf5f2; }
-.entrada-idioma-opcoes label { position: relative; margin: 0; cursor: pointer; }
-.entrada-idioma-opcoes input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
-.entrada-idioma-opcoes span { display: grid; min-height: 42px; place-items: center; border-radius: 10px; color: #607e81; font-size: 12px; font-weight: 850; transition: color .18s ease, background .18s ease, box-shadow .18s ease; }
-.entrada-idioma-opcoes input:checked + span { color: #fff; background: linear-gradient(135deg, #1ba393, #0f756e); box-shadow: 0 6px 15px rgba(15, 117, 110, .22); }
-.entrada-idioma-opcoes input:focus-visible + span { outline: 3px solid rgba(33, 162, 146, .28); outline-offset: 2px; }
+.entrada-cartao input:focus { border-color: #21a292; box-shadow: 0 0 0 5px rgba(33, 162, 146, .13); }
+.entrada-cartao input::placeholder { color: #9aafad; }
 .entrada-erro { display: block; min-height: 24px; padding-top: 5px; color: #bf4b34; font-size: 11px; font-weight: 700; }
 
 .entrada-cartao button[type="submit"] {
@@ -357,4 +347,400 @@ button { font: inherit; }
 
 @media (prefers-reduced-motion: reduce) {
   .entrada, .entrada *, .entrada-ativa #cidade { animation: none !important; transition-duration: .01ms !important; }
+}
+
+/* Guia conversacional da primeira missão */
+.marca { min-width: 148px; }
+.marca-logo {
+  display: block;
+  width: 126px;
+  height: 52px;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.barra-superior {
+  overflow: hidden;
+}
+
+.indicadores {
+  justify-content: center;
+  width: 100%;
+}
+
+.indicadores div {
+  min-width: 128px;
+}
+
+.projeto:has(.guia-prompt:not(.oculto)) {
+  width: min(430px, calc(100vw - 48px));
+  max-height: calc(100vh - 126px);
+  padding: 17px 18px 16px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-radius: 24px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(22, 141, 130, .35) transparent;
+}
+
+.projeto:has(.guia-prompt:not(.oculto)) h1 {
+  margin: 9px 0 3px;
+  font-size: 26px;
+}
+
+.projeto:has(.guia-prompt:not(.oculto)) > .personagem {
+  margin-bottom: 4px;
+}
+
+.projeto:has(.guia-prompt:not(.oculto)) > #pergunta {
+  min-height: 0;
+  margin-bottom: 10px;
+  font-size: 12px;
+  line-height: 1.38;
+}
+
+.guia-prompt {
+  display: grid;
+  gap: 9px;
+  margin-bottom: 10px;
+}
+
+.objetivo-prompt {
+  display: grid;
+  gap: 2px;
+  padding: 9px 11px;
+  border: 1px solid #cde7df;
+  border-left: 5px solid #168d82;
+  border-radius: 12px;
+  background: #f2faf7;
+}
+
+.objetivo-prompt span {
+  color: #668287;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+}
+
+.objetivo-prompt strong {
+  color: #183f45;
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.fala-prefeito {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 9px;
+  align-items: start;
+  padding: 9px 10px;
+  border-radius: 13px;
+  color: #fff;
+  background: #183f45;
+}
+
+.prefeito-avatar {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 2px solid rgba(255,255,255,.7);
+  border-radius: 50%;
+  color: #183f45;
+  background: #ffd566;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.fala-prefeito strong {
+  display: block;
+  color: #ffd566;
+  font-size: 10px;
+  letter-spacing: .25px;
+}
+
+.fala-prefeito p,
+.projeto .fala-prefeito p {
+  min-height: 0;
+  margin: 3px 0 0;
+  color: rgba(255,255,255,.9);
+  font-size: 11px;
+  line-height: 1.38;
+}
+
+.etapas-prompt {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.etapas-prompt > span {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+  padding: 6px;
+  border: 1px solid #d6e8e3;
+  border-radius: 9px;
+  color: #789095;
+  background: #f7fbf9;
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.etapas-prompt b {
+  display: grid;
+  flex: 0 0 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 50%;
+  color: #668287;
+  background: #dfe9e5;
+  font-size: 9px;
+}
+
+.etapas-prompt > .ativa {
+  border-color: #168d82;
+  color: #183f45;
+  background: #e9f7f2;
+}
+
+.etapas-prompt > .ativa b,
+.etapas-prompt > .concluida b {
+  color: #fff;
+  background: #168d82;
+}
+
+.compositor-prompt {
+  display: grid;
+  gap: 6px;
+}
+
+.controles-voz {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 76px;
+  gap: 7px;
+}
+
+.projeto .botao-voz,
+.projeto .botao-mutar {
+  min-height: 53px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 13px;
+  color: #fff;
+  background: #168d82;
+  box-shadow: 0 5px 0 #0d6964;
+}
+
+.projeto .botao-voz {
+  display: grid;
+  grid-template-columns: 25px minmax(0, 1fr) 42px;
+  align-items: center;
+  gap: 8px;
+  cursor: default;
+  text-align: left;
+}
+
+.projeto .botao-voz b,
+.projeto .botao-mutar b {
+  font-size: 11px;
+  line-height: 1.15;
+}
+
+.icone-microfone,
+.botao-mutar > span {
+  position: relative;
+  display: block;
+  width: 15px;
+  height: 21px;
+  margin: auto;
+  border: 2px solid currentColor;
+  border-radius: 9px;
+}
+
+.icone-microfone::after,
+.botao-mutar > span::after {
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  width: 11px;
+  height: 6px;
+  border: 2px solid currentColor;
+  border-top: 0;
+  border-radius: 0 0 8px 8px;
+  content: "";
+  transform: translateX(-50%);
+}
+
+.botao-voz i {
+  display: flex;
+  height: 24px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+}
+
+.botao-voz i span {
+  width: 3px;
+  height: 8px;
+  border-radius: 9px;
+  background: #fff;
+  animation: voz-ativa 1.1s ease-in-out infinite alternate;
+}
+
+.botao-voz i span:nth-child(2) { height: 17px; animation-delay: -.2s; }
+.botao-voz i span:nth-child(3) { height: 23px; animation-delay: -.4s; }
+.botao-voz i span:nth-child(4) { height: 14px; animation-delay: -.6s; }
+.botao-voz i span:nth-child(5) { height: 9px; animation-delay: -.8s; }
+
+.projeto .botao-mutar {
+  display: grid;
+  gap: 3px;
+  place-items: center;
+  cursor: pointer;
+  background: #315d62;
+  box-shadow: 0 5px 0 #183f45;
+}
+
+.projeto .botao-mutar > span {
+  width: 11px;
+  height: 16px;
+}
+
+.projeto .botao-mutar.mutado {
+  color: #fff;
+  background: #bf5a48;
+  box-shadow: 0 5px 0 #853a2e;
+}
+
+.projeto .botao-mutar.mutado > span::before {
+  position: absolute;
+  top: 5px;
+  left: -5px;
+  width: 18px;
+  height: 2px;
+  background: currentColor;
+  content: "";
+  transform: rotate(-45deg);
+}
+
+.compositor-prompt small {
+  display: block;
+  min-height: 14px;
+  color: #668287;
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.compositor-prompt label {
+  margin-top: 1px;
+  color: #315d62;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+}
+
+.compositor-prompt textarea {
+  width: 100%;
+  height: 58px;
+  min-height: 58px;
+  max-height: 100px;
+  padding: 10px 11px;
+  resize: vertical;
+  border: 2px solid #cfe3de;
+  border-radius: 12px;
+  outline: 0;
+  color: #183f45;
+  background: #fff;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.compositor-prompt textarea:focus {
+  border-color: #168d82;
+  box-shadow: 0 0 0 4px rgba(22,141,130,.11);
+}
+
+.projeto .botao-construir {
+  min-height: 43px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+}
+
+.projeto .alternar-opcoes {
+  min-height: 0;
+  padding: 2px 4px;
+  border: 0;
+  color: #537176;
+  background: transparent;
+  box-shadow: none;
+  font-size: 9px;
+  font-weight: 750;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.projeto .alternar-opcoes:hover,
+.projeto .alternar-opcoes:active {
+  color: #168d82;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+.prompt-blueprint {
+  display: grid;
+  gap: 6px;
+  padding: 9px 10px;
+  border-radius: 12px;
+  background: #fff8dc;
+}
+
+.prompt-blueprint > strong {
+  color: #705919;
+  font-size: 10px;
+}
+
+.prompt-blueprint > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.prompt-blueprint span {
+  padding: 5px 7px;
+  border-radius: 99px;
+  color: #8b8266;
+  background: rgba(255,255,255,.7);
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.prompt-blueprint span.presente {
+  color: #fff;
+  background: #168d82;
+}
+
+@keyframes voz-ativa {
+  to { transform: scaleY(.55); opacity: .68; }
+}
+
+@media (max-width: 760px) {
+  .marca-logo { width: 82px; height: 39px; }
+  .indicadores div { min-width: 88px; }
+  .indicadores div:nth-child(2), .indicadores div:nth-child(3) { display: none; }
+  .audio-toggle { padding: 7px 9px; font-size: 10px; }
+  .audio-painel { top: calc(100% + 14px); width: min(270px, calc(100vw - 20px)); }
+  .projeto:has(.guia-prompt:not(.oculto)) {
+    left: 10px;
+    bottom: 10px;
+    width: calc(100vw - 20px);
+    max-height: calc(100vh - 80px);
+  }
 }

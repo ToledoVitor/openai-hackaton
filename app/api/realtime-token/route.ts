@@ -1,15 +1,9 @@
-import {
-  realtimeSessionRequestSchema,
-  type RealtimeSessionRequest,
-} from "../../../src/domain/mission-contracts";
-import { readJsonWithLimit } from "../../../src/server/guardrails";
 import { createRealtimeClientSecret } from "../../../src/server/realtime/create-client-secret";
+
 export const runtime = "nodejs";
 
-type RealtimeCredential = { value: string; expiresAt: number; model?: string };
-type CreateClientSecret = (session: RealtimeSessionRequest) => Promise<RealtimeCredential>;
-
-const REALTIME_BODY_LIMIT_BYTES = 8 * 1024;
+type RealtimeCredential = { value: string; expiresAt: number };
+type CreateClientSecret = () => Promise<RealtimeCredential>;
 
 function json(body: unknown, status: number, cacheControl?: string): Response {
   return Response.json(body, {
@@ -20,17 +14,10 @@ function json(body: unknown, status: number, cacheControl?: string): Response {
 
 export function createRealtimeTokenPost(dependencies: { createClientSecret: CreateClientSecret }) {
   return async function post(request: Request): Promise<Response> {
-    let session: RealtimeSessionRequest;
-    try {
-      session = realtimeSessionRequestSchema.parse(
-        await readJsonWithLimit(request, REALTIME_BODY_LIMIT_BYTES),
-      );
-    } catch {
-      return json({ error: "invalid_request" }, 400);
-    }
+    void request;
 
     try {
-      const credential = await dependencies.createClientSecret(session);
+      const credential = await dependencies.createClientSecret();
 
       return json(credential, 200, "no-store");
     } catch {
@@ -47,11 +34,9 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   return createRealtimeTokenPost({
-    createClientSecret: (session) =>
-      createRealtimeClientSecret({
-        apiKey,
-        session,
-        model: process.env.OPENAI_REALTIME_MODEL ?? "gpt-realtime",
-      }),
+    createClientSecret: () => createRealtimeClientSecret({
+      apiKey,
+      safetyIdentifier: request.headers.get("x-safety-identifier") ?? undefined,
+    }),
   })(request);
 }

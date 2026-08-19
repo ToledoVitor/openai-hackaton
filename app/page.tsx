@@ -2,106 +2,40 @@
 
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { createAudioManager, DEFAULT_AUDIO_PREFERENCES, type AudioPreferences } from '@/src/audio';
-import { getStoredLanguage, isLanguage, LANGUAGE_CHANGE_EVENT } from '@/src/client/language';
-import type { Language } from '@/src/domain/mission-contracts';
 
-const UI_COPY = {
-  portuguese: {
-    canvasLabel: 'Cidade interativa em três dimensões',
-    education: 'Educação urbana',
-    indicatorsLabel: 'Indicadores da cidade',
-    residents: 'Moradores',
-    satisfaction: 'Satisfação',
-    resources: 'Recursos',
-    day: 'Dia 1',
-    soundOff: 'Som desligado',
-    sound: 'Som',
-    audioControls: 'Controles de áudio',
-    citySounds: 'Sons da cidade',
-    audioHint: 'Ajuste como preferir',
-    enable: 'Ativar',
-    mute: 'Silenciar',
-    soundtrack: 'Trilha sonora',
-    missionIndex: 'Missão 1 de 4',
-    missionTitle: 'A Nova Escola',
-    mayor: 'Prefeito AI',
-    question: 'A cidade cresceu e precisa de uma escola pública.',
-    progressLabel: 'Progresso das missões',
-    next: 'Próxima missão',
-    cameraControls: 'Controles de câmera',
-    overview: 'Visão geral',
-    focus: 'Focar na missão',
-    help: 'Arraste para girar · Role para aproximar · Clique na obra',
-    loading: 'Construindo a cidade…',
-  },
-  english: {
-    canvasLabel: 'Interactive three-dimensional city',
-    education: 'Urban education',
-    indicatorsLabel: 'City indicators',
-    residents: 'Residents',
-    satisfaction: 'Satisfaction',
-    resources: 'Resources',
-    day: 'Day 1',
-    soundOff: 'Sound off',
-    sound: 'Sound',
-    audioControls: 'Audio controls',
-    citySounds: 'City sounds',
-    audioHint: 'Adjust as you prefer',
-    enable: 'Enable',
-    mute: 'Mute',
-    soundtrack: 'Soundtrack',
-    missionIndex: 'Mission 1 of 4',
-    missionTitle: 'The New School',
-    mayor: 'AI Mayor',
-    question: 'The city has grown and needs a public school.',
-    progressLabel: 'Mission progress',
-    next: 'Next mission',
-    cameraControls: 'Camera controls',
-    overview: 'Overview',
-    focus: 'Focus mission',
-    help: 'Drag to rotate · Scroll to zoom · Click the construction site',
-    loading: 'Building the city…',
-  },
-} as const satisfies Record<Language, Record<string, string>>;
+type CityAudio = ReturnType<typeof createAudioManager>;
+
+declare global {
+  interface Window {
+    cidadeAudio?: CityAudio;
+  }
+}
 
 export default function HomePage() {
-  const audioRef = useRef<ReturnType<typeof createAudioManager> | null>(null);
+  const audioRef = useRef<CityAudio | null>(null);
   const [audioMenuOpen, setAudioMenuOpen] = useState(false);
   const [audioPreferences, setAudioPreferences] = useState<AudioPreferences>({ ...DEFAULT_AUDIO_PREFERENCES });
-  const [language, setLanguage] = useState<Language>('portuguese');
-  const copy = UI_COPY[language];
 
   useEffect(() => {
-    void import('@/src/game/main');
-
     const audio = createAudioManager();
     audioRef.current = audio;
-    const preferencesFrame = window.requestAnimationFrame(() => {
+    window.cidadeAudio = audio;
+    const frame = window.requestAnimationFrame(() => {
       setAudioPreferences({ ...audio.getPreferences() });
     });
 
     const startAudio = () => audio.start();
     window.addEventListener('pointerdown', startAudio, { once: true });
     window.addEventListener('keydown', startAudio, { once: true });
+    void import('@/src/game/main');
 
     return () => {
-      window.cancelAnimationFrame(preferencesFrame);
+      window.cancelAnimationFrame(frame);
       window.removeEventListener('pointerdown', startAudio);
       window.removeEventListener('keydown', startAudio);
       audio.stop();
-      audioRef.current = null;
+      delete window.cidadeAudio;
     };
-  }, []);
-
-  useEffect(() => {
-    setLanguage(getStoredLanguage(window.localStorage));
-
-    const handleLanguageChange = (event: Event) => {
-      const nextLanguage = (event as CustomEvent<unknown>).detail;
-      if (isLanguage(nextLanguage)) setLanguage(nextLanguage);
-    };
-    window.addEventListener(LANGUAGE_CHANGE_EVENT, handleLanguageChange);
-    return () => window.removeEventListener(LANGUAGE_CHANGE_EVENT, handleLanguageChange);
   }, []);
 
   function toggleAudio() {
@@ -134,37 +68,40 @@ export default function HomePage() {
 
   return (
     <main id="app">
-      <canvas id="cidade" aria-label={copy.canvasLabel} />
+      <canvas id="cidade" aria-label="Cidade interativa em três dimensões" />
 
       <header className="barra-superior">
         <div className="marca">
-          <span className="marca-simbolo" aria-hidden="true" />
-          <div><strong>AI City</strong><small>{copy.education}</small></div>
+          <img className="marca-logo" src="/assets/brand/ai-city-logo.png" alt="AI City" />
         </div>
-        <div className="indicadores" aria-label={copy.indicatorsLabel}>
-          <div><span>{copy.residents}</span><strong id="moradores">8.420</strong></div>
-          <div><span>{copy.satisfaction}</span><strong id="satisfacao">72%</strong></div>
-          <div><span>{copy.resources}</span><strong id="recursos">R$ 2.400.000</strong></div>
+        <div className="indicadores" aria-label="Progresso de aprendizagem">
+          <div><span>Missões concluídas</span><strong id="missoes-concluidas">0 de 1</strong></div>
+          <div><span>Conceito atual</span><strong id="conceito-atual">Prompt</strong></div>
+          <div><span>Aprendizados</span><strong id="aprendizados">0 de 1</strong></div>
         </div>
-        <div className="relogio" id="relogio">{copy.day} · 09:00</div>
+        <div className="relogio oculto" id="relogio" aria-hidden="true">Dia 1 · 09:00</div>
         <div className="audio-menu">
           <button
             className="audio-toggle"
             type="button"
             aria-expanded={audioMenuOpen}
             aria-controls="audio-controles"
-            onClick={toggleAudioMenu}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              toggleAudioMenu();
+            }}
           >
             <span aria-hidden="true">♪</span>
-            {audioPreferences.muted ? copy.soundOff : copy.sound}
+            {audioPreferences.muted ? 'Som desligado' : 'Som'}
           </button>
 
-          {audioMenuOpen && (
-            <section className="audio-painel" id="audio-controles" aria-label={copy.audioControls}>
+          {audioMenuOpen ? (
+            <section className="audio-painel" id="audio-controles" aria-label="Controles de áudio">
               <div className="audio-painel-cabecalho">
                 <div>
-                  <strong>{copy.citySounds}</strong>
-                  <small>{copy.audioHint}</small>
+                  <strong>Sons da cidade</strong>
+                  <small>Ajuste como preferir</small>
                 </div>
                 <button
                   className="audio-master"
@@ -172,13 +109,13 @@ export default function HomePage() {
                   aria-pressed={audioPreferences.muted}
                   onClick={toggleAudio}
                 >
-                  {audioPreferences.muted ? copy.enable : copy.mute}
+                  {audioPreferences.muted ? 'Ativar' : 'Silenciar'}
                 </button>
               </div>
 
               <label className="audio-controle">
                 <span>
-                  {copy.soundtrack}
+                  Trilha sonora
                   <output>{Math.round(audioPreferences.musicVolume * 100)}%</output>
                 </span>
                 <input
@@ -193,7 +130,7 @@ export default function HomePage() {
 
               <label className="audio-controle">
                 <span>
-                  {copy.citySounds}
+                  Sons da cidade
                   <output>{Math.round(audioPreferences.ambienceVolume * 100)}%</output>
                 </span>
                 <input
@@ -206,40 +143,87 @@ export default function HomePage() {
                 />
               </label>
             </section>
-          )}
+          ) : null}
         </div>
       </header>
 
       <section className="projeto" aria-labelledby="missao-titulo">
         <div className="projeto-cabecalho">
-          <span className="etiqueta" id="missao-indice">{copy.missionIndex}</span>
+          <span className="etiqueta" id="missao-indice">Missão 1 de 1</span>
           <span className="prazo" id="tempo-jogo">00:00</span>
         </div>
-        <h1 id="missao-titulo">{copy.missionTitle}</h1>
-        <span className="personagem" id="personagem">{copy.mayor}</span>
-        <p id="pergunta">{copy.question}</p>
-        <div className="progresso" aria-label={copy.progressLabel}>
+        <h1 id="missao-titulo">A Nova Escola</h1>
+        <span className="personagem" id="personagem">Prefeito</span>
+        <p id="pergunta">Converse com o Prefeito e oriente a construção até a escola atender às crianças do bairro.</p>
+
+        <div className="guia-prompt oculto" id="guia-prompt">
+          <div className="objetivo-prompt">
+            <span>Objetivo da missão</span>
+            <strong id="objetivo-prompt-texto">Construa uma escola com um prompt</strong>
+          </div>
+
+          <div className="fala-prefeito" aria-live="polite">
+            <span className="prefeito-avatar" aria-hidden="true">P</span>
+            <div>
+              <strong>Prefeito · conversa em tempo real</strong>
+              <p id="fala-prefeito">Peça a escola do seu jeito; os construtores seguirão exatamente o que você disser.</p>
+            </div>
+          </div>
+
+          <div className="etapas-prompt" aria-label="Etapas da missão">
+            <span className="ativa" data-prompt-etapa="1"><b>1</b> Explique a ideia</span>
+            <span data-prompt-etapa="2"><b>2</b> Veja a construção</span>
+            <span data-prompt-etapa="3"><b>3</b> Ajuste com o Prefeito</span>
+          </div>
+
+          <div className="compositor-prompt" id="prompt-form">
+            <div className="controles-voz">
+              <button className="botao-voz" id="prompt-voz" type="button" aria-label="Falar com o Prefeito">
+                <span className="icone-microfone" aria-hidden="true" />
+                <b>Pausar conversa</b>
+                <i aria-hidden="true"><span /><span /><span /><span /><span /></i>
+              </button>
+              <button className="botao-mutar mutado" id="prompt-mutar" type="button" aria-pressed="true" aria-label="Ativar microfone">
+                <span aria-hidden="true" />
+                <b>Ativar</b>
+              </button>
+            </div>
+            <small className="oculto" id="prompt-status" aria-live="polite" />
+          </div>
+
+          <button className="alternar-opcoes" id="alternar-opcoes" type="button">Prefiro escolher uma opção</button>
+
+          <div className="prompt-blueprint oculto" id="prompt-blueprint">
+            <strong>Um bom prompt explica:</strong>
+            <div>
+              <span data-blueprint="objetivo">Objetivo</span>
+              <span data-blueprint="contexto">Contexto</span>
+              <span data-blueprint="restricoes">Restrições</span>
+              <span data-blueprint="resultado">Resultado esperado</span>
+            </div>
+          </div>
+        </div>
+        <div className="progresso" aria-label="Progresso das missões">
           <span id="progresso-barra" />
         </div>
         <div className="progresso-legenda">
-          <span id="fase">{copy.missionTitle}</span>
+          <span id="fase">A Nova Escola</span>
           <strong id="percentual">0%</strong>
         </div>
         <div className="escolhas" id="escolhas" />
         <div className="resultado oculto" id="resultado">
           <p id="resultado-texto" />
           <div className="impactos" id="impactos" />
-          <button id="proximo" type="button">{copy.next}</button>
+          <button id="proximo" type="button">Próxima missão</button>
         </div>
       </section>
 
-      <nav className="camera" aria-label={copy.cameraControls}>
-        <button id="visao-geral" type="button">{copy.overview}</button>
-        <button id="focar-missao" type="button">{copy.focus}</button>
+      <nav className="camera" aria-label="Controles de câmera">
+        <button id="visao-geral" type="button">Visão geral</button>
+        <button className="ativo" id="focar-missao" type="button">Focar na missão</button>
       </nav>
 
-      <p className="ajuda">{copy.help}</p>
-      <div className="carregando" id="carregando"><span />{copy.loading}</div>
+      <div className="carregando" id="carregando"><span />Construindo a cidade…</div>
       <div className="aviso" id="aviso" role="status" aria-live="polite" />
     </main>
   );

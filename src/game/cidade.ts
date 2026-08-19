@@ -25,6 +25,10 @@ export class Cidade {
   private barreiras: THREE.Group | null = null;
   private escolaCompacta: THREE.Object3D | null = null;
   private escolaPatio: THREE.Object3D | null = null;
+  private centroBasico: THREE.Object3D | null = null;
+  private centroCompleto: THREE.Object3D | null = null;
+  private fumacaConstrucao: THREE.Group | null = null;
+  private timerConstrucao = 0;
   private semaforos: THREE.Group | null = null;
   private ruaCalma: THREE.Group | null = null;
   private lixoProblema: THREE.Group | null = null;
@@ -81,6 +85,7 @@ export class Cidade {
 
     this.construirObra();
     this.construirEscolas(escolaCompacta.scene, escolaPatio.scene);
+    this.construirCentroComunitario(predioA.scene.clone(), predioH.scene.clone());
     this.construirMobilidade(semaforo.scene, banco.scene, arbusto.scene);
     this.construirImprevisto(lixo.scene, lixeira.scene, torreAgua.scene);
     this.construirDestinoFinal(banco.scene, arbusto.scene);
@@ -93,7 +98,7 @@ export class Cidade {
       this.lixoProblema.visible = true;
     }
     if (this.destaque) {
-      const locais: Array<[number, number]> = [[-8, 7], [-22, 0.5], [14, 2], [-8, 7]];
+      const locais: Array<[number, number]> = [[-8, 7], [14, 2]];
       const [x, z] = locais[indice] ?? locais[0];
       this.destaque.position.set(x, 0.3, z);
       this.destaque.visible = true;
@@ -114,6 +119,14 @@ export class Cidade {
         this.mostrar(this.escolaCompacta, false);
         this.mostrar(this.escolaPatio, true);
         this.mostrar(this.barreiras, false);
+        break;
+      case 'centro-basico':
+        this.mostrar(this.centroBasico, true);
+        this.mostrar(this.centroCompleto, false);
+        break;
+      case 'centro-completo':
+        this.mostrar(this.centroBasico, false);
+        this.mostrar(this.centroCompleto, true);
         break;
       case 'semaforo':
         this.mostrar(this.semaforos, true);
@@ -148,7 +161,8 @@ export class Cidade {
     this.decisoes = [];
     this.ritmoTransito = 1;
     [
-      this.escolaCompacta, this.escolaPatio, this.semaforos, this.ruaCalma,
+      this.escolaCompacta, this.escolaPatio, this.centroBasico, this.centroCompleto,
+      this.semaforos, this.ruaCalma,
       this.lixoProblema, this.coletaOrganizada, this.torreAgua, this.laboratorio,
       this.biblioteca, this.celebracao,
     ].forEach((objeto) => this.mostrar(objeto, false));
@@ -260,10 +274,10 @@ export class Cidade {
 
   private posicionarPersonagens(indice: number) {
     const locais = [
-      [[-12.4, 4.5, 0.35], [-3.7, 4.5, -0.35]],
-      [[-18.8, 3.3, Math.PI], [-17.4, -2.35, 0]],
+      [[-9.7, 10.7, 0.05], [-7.3, 10.65, -0.05]],
+      [[12.7, 4.8, 0.2], [15, 4.7, -0.2]],
       [[11.7, 7.8, Math.PI], [14.3, -3.2, 0]],
-      [[-12.4, 4.5, 0.35], [-3.7, 4.5, -0.35]],
+      [[-9.7, 10.7, 0.05], [-7.3, 10.65, -0.05]],
     ] as const;
     const destino = locais[indice] ?? locais[0];
     this.personagens.forEach((personagem, personagemIndice) => {
@@ -660,10 +674,7 @@ export class Cidade {
 
   private construirEscolas(compacta: THREE.Object3D, patio: THREE.Object3D) {
     const grupoCompacta = new THREE.Group();
-    const blocosCompactos = [compacta, compacta.clone(), compacta.clone()];
-    this.adicionarNoChao(blocosCompactos[0], [-8, 0.31, 6.6], 3, Math.PI, grupoCompacta);
-    this.adicionarNoChao(blocosCompactos[1], [-11.15, 0.31, 7.35], 2.35, Math.PI, grupoCompacta);
-    this.adicionarNoChao(blocosCompactos[2], [-4.85, 0.31, 7.35], 2.35, Math.PI, grupoCompacta);
+    this.adicionarNoChao(compacta, [-8, 0.31, 6.2], 2.15, Math.PI, grupoCompacta);
     this.grupo.add(grupoCompacta);
     this.escolaCompacta = grupoCompacta;
 
@@ -681,6 +692,20 @@ export class Cidade {
     grupoPatio.add(quadra);
     this.grupo.add(grupoPatio);
     this.escolaPatio = grupoPatio;
+  }
+
+  private construirCentroComunitario(basico: THREE.Object3D, completo: THREE.Object3D) {
+    const grupoBasico = new THREE.Group();
+    this.adicionarNoChao(basico, [14, 0.3, 2], 3.1, Math.PI, grupoBasico);
+    this.grupo.add(grupoBasico);
+    this.centroBasico = grupoBasico;
+
+    const grupoCompleto = new THREE.Group();
+    this.adicionarNoChao(completo, [14, 0.3, 1.4], 3.25, Math.PI, grupoCompleto);
+    this.adicionarNoChao(completo.clone(), [11.5, 0.3, 3.2], 2.2, Math.PI / 2, grupoCompleto);
+    this.adicionarNoChao(completo.clone(), [16.5, 0.3, 3.2], 2.2, -Math.PI / 2, grupoCompleto);
+    this.grupo.add(grupoCompleto);
+    this.centroCompleto = grupoCompleto;
   }
 
   private construirMobilidade(semaforo: THREE.Object3D, banco: THREE.Object3D, arbusto: THREE.Object3D) {

@@ -2,180 +2,34 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Cidade } from './cidade';
 import { mostrarEntrada } from './entrada';
-import type { Language } from '../domain/mission-contracts';
-
-type LocalizedText = Record<Language, string>;
+import { RealtimeVoice } from './realtime';
 type Escolha = {
   id: string;
-  rotulo: LocalizedText;
-  resultado: LocalizedText;
+  rotulo: string;
+  resultado: string;
   satisfacao: number;
   recursos: number;
   moradores: number;
 };
 
 type Missao = {
-  titulo: LocalizedText;
-  personagem: LocalizedText;
-  pergunta: LocalizedText;
+  titulo: string;
+  personagem: string;
+  pergunta: string;
   escolhas: [Escolha, Escolha];
 };
 
 const MISSOES: Missao[] = [
   {
-    titulo: { portuguese: 'A Nova Escola', english: 'The New School' },
-    personagem: { portuguese: 'Prefeito AI', english: 'AI Mayor' },
-    pergunta: {
-      portuguese: 'A cidade cresceu e precisa de uma escola pública; qual projeto atende melhor o bairro?',
-      english: 'The city has grown and needs a public school; which project best serves the neighborhood?',
-    },
+    titulo: 'A Nova Escola',
+    personagem: 'Prefeito',
+    pergunta: 'Converse com o Prefeito e oriente a construção até a escola atender às crianças do bairro.',
     escolhas: [
-      {
-        id: 'escola-compacta',
-        rotulo: { portuguese: 'Escola compacta no centro', english: 'Compact downtown school' },
-        resultado: {
-          portuguese: 'O prédio aproveita a infraestrutura central e abre vagas rapidamente.',
-          english: 'The building uses downtown infrastructure and opens student places quickly.',
-        },
-        satisfacao: 3, recursos: -420_000, moradores: 120,
-      },
-      {
-        id: 'escola-patio',
-        rotulo: { portuguese: 'Escola com pátio no bairro', english: 'Neighborhood school with a yard' },
-        resultado: {
-          portuguese: 'O pátio cria espaço para esporte e aproxima a escola das famílias.',
-          english: 'The yard creates space for sports and brings the school closer to families.',
-        },
-        satisfacao: 6, recursos: -540_000, moradores: 180,
-      },
-    ],
-  },
-  {
-    titulo: { portuguese: 'Caminho Seguro', english: 'Safe Path' },
-    personagem: { portuguese: 'Engenheira Bia', english: 'Engineer Bia' },
-    pergunta: {
-      portuguese: 'O trânsito passa na porta da escola; como proteger os estudantes na chegada?',
-      english: 'Traffic passes the school entrance; how should students be protected on arrival?',
-    },
-    escolhas: [
-      {
-        id: 'semaforo',
-        rotulo: { portuguese: 'Instalar semáforos inteligentes', english: 'Install smart traffic lights' },
-        resultado: {
-          portuguese: 'Os cruzamentos agora organizam carros e pedestres nos horários de entrada.',
-          english: 'Crossings now organize cars and pedestrians during school arrival times.',
-        },
-        satisfacao: 5, recursos: -90_000, moradores: 25,
-      },
-      {
-        id: 'rua-calma',
-        rotulo: { portuguese: 'Criar uma rua calma e arborizada', english: 'Create a calm, tree-lined street' },
-        resultado: {
-          portuguese: 'Bancos e áreas verdes reduzem a velocidade e tornam o caminho mais acolhedor.',
-          english: 'Benches and green areas slow traffic and make the route more welcoming.',
-        },
-        satisfacao: 4, recursos: -60_000, moradores: 40,
-      },
-    ],
-  },
-  {
-    titulo: { portuguese: 'O Imprevisto', english: 'The Unexpected Event' },
-    personagem: { portuguese: 'Agente Rui', english: 'Agent Rui' },
-    pergunta: {
-      portuguese: 'A obra revelou baixa pressão de água e o lixo se acumulou; qual problema vem primeiro?',
-      english: 'Construction revealed low water pressure while garbage piled up; which problem comes first?',
-    },
-    escolhas: [
-      {
-        id: 'agua',
-        rotulo: { portuguese: 'Garantir o abastecimento de água', english: 'Secure the water supply' },
-        resultado: {
-          portuguese: 'Uma nova torre estabiliza o abastecimento da escola e das casas próximas.',
-          english: 'A new water tower stabilizes supply for the school and nearby homes.',
-        },
-        satisfacao: 3, recursos: -110_000, moradores: 55,
-      },
-      {
-        id: 'limpeza',
-        rotulo: { portuguese: 'Organizar a coleta do bairro', english: 'Organize neighborhood waste collection' },
-        resultado: {
-          portuguese: 'O entorno fica limpo e ganha um ponto permanente de coleta organizada.',
-          english: 'The area becomes clean and gains a permanent organized collection point.',
-        },
-        satisfacao: 5, recursos: -70_000, moradores: 30,
-      },
-    ],
-  },
-  {
-    titulo: { portuguese: 'A Escola da Cidade', english: 'The City School' },
-    personagem: { portuguese: 'Educadora Nina', english: 'Educator Nina' },
-    pergunta: {
-      portuguese: 'A escola está pronta; qual espaço deve aproximar educação, comunidade e futuro?',
-      english: 'The school is ready; which space should bring education, community, and the future together?',
-    },
-    escolhas: [
-      {
-        id: 'laboratorio',
-        rotulo: { portuguese: 'Laboratório de inteligência artificial', english: 'Artificial intelligence lab' },
-        resultado: {
-          portuguese: 'O laboratório conecta estudantes a projetos de tecnologia para a cidade.',
-          english: 'The lab connects students with technology projects for the city.',
-        },
-        satisfacao: 6, recursos: -180_000, moradores: 60,
-      },
-      {
-        id: 'biblioteca',
-        rotulo: { portuguese: 'Biblioteca e praça de leitura', english: 'Library and reading plaza' },
-        resultado: {
-          portuguese: 'A escola vira ponto de encontro para estudantes, famílias e moradores.',
-          english: 'The school becomes a meeting place for students, families, and residents.',
-        },
-        satisfacao: 7, recursos: -120_000, moradores: 90,
-      },
+      { id: 'escola-compacta', rotulo: 'Escola compacta no centro', resultado: 'O prédio aproveita a infraestrutura central e abre vagas rapidamente.', satisfacao: 3, recursos: -420_000, moradores: 120 },
+      { id: 'escola-patio', rotulo: 'Escola com pátio no bairro', resultado: 'O pátio cria espaço para esporte e aproxima a escola das famílias.', satisfacao: 6, recursos: -540_000, moradores: 180 },
     ],
   },
 ];
-
-const GAME_COPY = {
-  portuguese: {
-    mission: 'Missão',
-    of: 'de',
-    decisionApplied: 'Decisão aplicada',
-    satisfactionImpact: 'satisfação',
-    transformedCity: 'Ver cidade transformada',
-    nextMission: 'Próxima missão',
-    changedNotice: 'A cidade mudou com a sua decisão',
-    transformed: 'Cidade transformada',
-    finalTitle: 'Uma cidade que aprende',
-    managementResult: 'Resultado da gestão',
-    finalDescription: 'A escola abriu, o bairro evoluiu e cada escolha deixou uma marca visível na cidade.',
-    residents: 'moradores',
-    satisfaction: 'de satisfação',
-    playAgain: 'Jogar novamente',
-    completed: 'Quatro missões concluídas',
-    day: 'Dia 1',
-    loadError: 'Não foi possível carregar a cidade.',
-  },
-  english: {
-    mission: 'Mission',
-    of: 'of',
-    decisionApplied: 'Decision applied',
-    satisfactionImpact: 'satisfaction',
-    transformedCity: 'View transformed city',
-    nextMission: 'Next mission',
-    changedNotice: 'Your decision changed the city',
-    transformed: 'Transformed city',
-    finalTitle: 'A city that learns',
-    managementResult: 'Administration result',
-    finalDescription: 'The school opened, the neighborhood evolved, and every choice left a visible mark on the city.',
-    residents: 'residents',
-    satisfaction: 'satisfaction',
-    playAgain: 'Play again',
-    completed: 'Four missions completed',
-    day: 'Day 1',
-    loadError: 'The city could not be loaded.',
-  },
-} as const satisfies Record<Language, Record<string, string>>;
 
 const canvas = document.querySelector<HTMLCanvasElement>('#cidade')!;
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -200,11 +54,13 @@ controles.minDistance = 11;
 controles.maxDistance = 48;
 controles.minPolarAngle = 0.35;
 controles.maxPolarAngle = Math.PI / 2.08;
-controles.enablePan = false;
+controles.enablePan = true;
+controles.screenSpacePanning = true;
 controles.update();
 
 const cidade = new Cidade();
 cena.add(cidade.grupo);
+const voz = new RealtimeVoice();
 
 const ui = {
   indice: document.querySelector<HTMLElement>('#missao-indice')!,
@@ -220,11 +76,20 @@ const ui = {
   barra: document.querySelector<HTMLElement>('#progresso-barra')!,
   fase: document.querySelector<HTMLElement>('#fase')!,
   percentual: document.querySelector<HTMLElement>('#percentual')!,
-  moradores: document.querySelector<HTMLElement>('#moradores')!,
-  satisfacao: document.querySelector<HTMLElement>('#satisfacao')!,
-  recursos: document.querySelector<HTMLElement>('#recursos')!,
+  missoesConcluidas: document.querySelector<HTMLElement>('#missoes-concluidas')!,
+  conceitoAtual: document.querySelector<HTMLElement>('#conceito-atual')!,
+  aprendizados: document.querySelector<HTMLElement>('#aprendizados')!,
   relogio: document.querySelector<HTMLElement>('#relogio')!,
   aviso: document.querySelector<HTMLElement>('#aviso')!,
+  guiaPrompt: document.querySelector<HTMLElement>('#guia-prompt')!,
+  falaPrefeito: document.querySelector<HTMLElement>('#fala-prefeito')!,
+  promptForm: document.querySelector<HTMLElement>('#prompt-form')!,
+  promptVoz: document.querySelector<HTMLButtonElement>('#prompt-voz')!,
+  promptMutar: document.querySelector<HTMLButtonElement>('#prompt-mutar')!,
+  promptStatus: document.querySelector<HTMLElement>('#prompt-status')!,
+  promptBlueprint: document.querySelector<HTMLElement>('#prompt-blueprint')!,
+  objetivoPrompt: document.querySelector<HTMLElement>('#objetivo-prompt-texto')!,
+  alternarOpcoes: document.querySelector<HTMLButtonElement>('#alternar-opcoes')!,
 };
 
 let missaoAtual = 0;
@@ -236,24 +101,20 @@ let recursos = 2_400_000;
 let segundosJogo = 0;
 let avisoTimer = 0;
 let jogador = '';
-let idioma: Language = 'portuguese';
 let jogoIniciado = false;
+let tentativasPrompt = 0;
 const historico: Escolha[] = [];
 
-function texto(conteudo: LocalizedText) {
-  return conteudo[idioma];
-}
-
 function formatarRecursos(valor: number) {
-  const locale = idioma === 'portuguese' ? 'pt-BR' : 'en-US';
-  return new Intl.NumberFormat(locale, { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(valor);
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(valor);
 }
 
 function atualizarIndicadores() {
-  const locale = idioma === 'portuguese' ? 'pt-BR' : 'en-US';
-  ui.moradores.textContent = new Intl.NumberFormat(locale).format(moradores);
-  ui.satisfacao.textContent = `${satisfacao}%`;
-  ui.recursos.textContent = formatarRecursos(recursos);
+  const concluidas = Math.min(MISSOES.length, missaoAtual + (resolvida ? 1 : 0));
+  const conceitos = ['Prompt'];
+  ui.missoesConcluidas.textContent = `${concluidas} de ${MISSOES.length}`;
+  ui.aprendizados.textContent = `${concluidas} de ${MISSOES.length}`;
+  ui.conceitoAtual.textContent = conceitos[missaoAtual] ?? 'Cidade transformada';
 }
 
 function atualizarProgresso(percentual: number, fase: string) {
@@ -272,7 +133,7 @@ function mostrarAviso(texto: string) {
 function focarMissao(indice = missaoAtual) {
   const enquadramentos = [
     { posicao: [8, 10, 21], alvo: [-8, 1.2, 7] },
-    { posicao: [-5, 9, 16], alvo: [-22, 0.8, 0.5] },
+    { posicao: [27, 11, 18], alvo: [14, 1, 2] },
     { posicao: [27, 11, 18], alvo: [14, 1, 2] },
     { posicao: [8, 12, 22], alvo: [-8, 2, 7] },
   ];
@@ -281,12 +142,16 @@ function focarMissao(indice = missaoAtual) {
   controles.target.fromArray(enquadramento.alvo);
   controles.update();
   cidade.destacar();
+  document.querySelector('#focar-missao')?.classList.add('ativo');
+  document.querySelector('#visao-geral')?.classList.remove('ativo');
 }
 
 function visaoGeral() {
   camera.position.set(24, 18, 29);
   controles.target.set(0, 1.1, 0);
   controles.update();
+  document.querySelector('#visao-geral')?.classList.add('ativo');
+  document.querySelector('#focar-missao')?.classList.remove('ativo');
 }
 
 function focarEntrada() {
@@ -299,29 +164,88 @@ function focarEntrada() {
 
 function renderizarMissao() {
   const missao = MISSOES[missaoAtual];
+  const missaoComVoz = true;
   finalizado = false;
   resolvida = false;
   cidade.prepararMissao(missaoAtual);
-  const copy = GAME_COPY[idioma];
-  ui.indice.textContent = `${copy.mission} ${missaoAtual + 1} ${copy.of} ${MISSOES.length}`;
-  ui.titulo.textContent = texto(missao.titulo);
-  ui.personagem.textContent = texto(missao.personagem);
-  ui.pergunta.textContent = texto(missao.pergunta);
+  ui.indice.textContent = `Missão ${missaoAtual + 1} de ${MISSOES.length}`;
+  ui.titulo.textContent = missao.titulo;
+  ui.personagem.textContent = missao.personagem;
+  ui.pergunta.textContent = missao.pergunta;
+  atualizarIndicadores();
   ui.escolhas.replaceChildren();
-  ui.escolhas.classList.remove('oculto');
+  ui.guiaPrompt.classList.toggle('oculto', !missaoComVoz);
+  ui.escolhas.classList.toggle('oculto', missaoComVoz);
   ui.resultado.classList.add('oculto');
-  atualizarProgresso(Math.round((missaoAtual / MISSOES.length) * 100), texto(missao.titulo));
+  atualizarProgresso(Math.round((missaoAtual / MISSOES.length) * 100), missao.titulo);
 
-  for (const escolha of missao.escolhas) {
+  if (missaoComVoz) {
+    tentativasPrompt = 0;
+    ui.promptForm.classList.remove('oculto');
+    ui.promptBlueprint.classList.add('oculto');
+    ui.objetivoPrompt.textContent = 'Construa uma escola com um prompt';
+    ui.falaPrefeito.textContent = 'Vamos construir uma escola juntos. Conte o que você imagina e observe como cada detalhe muda o projeto.';
+    ui.promptStatus.textContent = voz.isMuted()
+      ? 'Microfone desligado. Toque em Ativar para falar.'
+      : 'Converse naturalmente; a cidade muda enquanto vocês definem a escola.';
+    sincronizarMute();
+    ui.alternarOpcoes.textContent = 'Prefiro escolher uma opção';
+    document.querySelectorAll<HTMLElement>('[data-prompt-etapa]').forEach((etapa, indice) => etapa.classList.toggle('ativa', indice === 0));
+    document.querySelectorAll<HTMLElement>('[data-blueprint]').forEach((item) => item.classList.remove('presente'));
+  }
+
+  const escolhasDisponiveis = missaoComVoz ? [missao.escolhas[1]] : missao.escolhas;
+  for (const escolha of escolhasDisponiveis) {
     const botao = document.createElement('button');
     botao.type = 'button';
-    botao.textContent = texto(escolha.rotulo);
+    botao.textContent = missaoComVoz ? 'Usar a resposta sugerida' : escolha.rotulo;
     botao.dataset.escolha = escolha.id;
     botao.addEventListener('click', () => escolher(escolha.id));
     ui.escolhas.append(botao);
   }
 
   focarMissao();
+}
+
+function marcarEtapaPrompt(indiceAtivo: number) {
+  document.querySelectorAll<HTMLElement>('[data-prompt-etapa]').forEach((etapa, indice) => {
+    etapa.classList.toggle('ativa', indice === indiceAtivo);
+    etapa.classList.toggle('concluida', indice < indiceAtivo);
+  });
+}
+
+function marcarBlueprintCompleto() {
+  ui.promptBlueprint.classList.remove('oculto');
+  document.querySelectorAll<HTMLElement>('[data-blueprint]').forEach((item) => item.classList.add('presente'));
+}
+
+function executarAcaoVoz(nome: string, argumentos: Record<string, unknown>) {
+  if (nome !== 'atualizar_escola' || missaoAtual !== 0) {
+    return { ok: false, motivo: 'ação fora da missão atual' };
+  }
+
+  tentativasPrompt += 1;
+  const completar = argumentos.etapa === 'completa' || tentativasPrompt >= 2;
+  if (!completar) {
+    cidade.aplicarEscolha('escola-compacta');
+    marcarEtapaPrompt(1);
+    atualizarProgresso(12, 'Observando a primeira construção');
+    return {
+      ok: true,
+      visual: 'escola pequena construída',
+      fala: 'Diga que a escola ficou pequena. Na próxima fala do jogador, chame imediatamente atualizar_escola com etapa "completa". Sem perguntas.',
+    };
+  }
+
+  marcarEtapaPrompt(2);
+  marcarBlueprintCompleto();
+  escolher('escola-patio');
+  return {
+    ok: true,
+    visual: 'escola completa construída',
+    missaoConcluida: true,
+    fala: 'Parabenize em uma frase e encerre. Não faça perguntas.',
+  };
 }
 
 function escolher(id: string) {
@@ -337,17 +261,17 @@ function escolher(id: string) {
   recursos += escolha.recursos;
   cidade.aplicarEscolha(escolha.id);
   atualizarIndicadores();
-  const copy = GAME_COPY[idioma];
-  atualizarProgresso(Math.round(((missaoAtual + 1) / MISSOES.length) * 100), copy.decisionApplied);
+  atualizarProgresso(Math.round(((missaoAtual + 1) / MISSOES.length) * 100), 'Decisão aplicada');
   ui.escolhas.classList.add('oculto');
+  if (missaoAtual === 0) ui.promptForm.classList.add('oculto');
   ui.resultado.classList.remove('oculto');
-  ui.resultadoTexto.textContent = texto(escolha.resultado);
+  ui.resultadoTexto.textContent = escolha.resultado;
   ui.impactos.replaceChildren(
-    criarImpacto(`+${escolha.satisfacao}% ${copy.satisfactionImpact}`),
+    criarImpacto(`+${escolha.satisfacao}% satisfação`),
     criarImpacto(`${escolha.recursos < 0 ? '−' : '+'} ${formatarRecursos(Math.abs(escolha.recursos))}`),
   );
-  ui.proximo.textContent = missaoAtual === MISSOES.length - 1 ? copy.transformedCity : copy.nextMission;
-  mostrarAviso(copy.changedNotice);
+  ui.proximo.textContent = missaoAtual === MISSOES.length - 1 ? 'Ver cidade transformada' : 'Próxima missão';
+  mostrarAviso('A cidade mudou com a sua decisão');
   focarMissao();
   return true;
 }
@@ -372,21 +296,20 @@ function avancarMissao() {
 function renderizarFinal() {
   finalizado = true;
   resolvida = false;
-  const copy = GAME_COPY[idioma];
-  const locale = idioma === 'portuguese' ? 'pt-BR' : 'en-US';
-  ui.indice.textContent = copy.transformed;
-  ui.titulo.textContent = copy.finalTitle;
-  ui.personagem.textContent = copy.managementResult;
-  ui.pergunta.textContent = copy.finalDescription;
+  ui.indice.textContent = 'Cidade transformada';
+  ui.titulo.textContent = 'Uma cidade que aprende';
+  ui.personagem.textContent = 'Resultado da gestão';
+  ui.pergunta.textContent = 'A escola abriu, o bairro evoluiu e cada escolha deixou uma marca visível na cidade.';
   ui.escolhas.classList.add('oculto');
+  ui.guiaPrompt.classList.add('oculto');
   ui.resultado.classList.remove('oculto');
-  ui.resultadoTexto.textContent = historico.map((item) => texto(item.rotulo)).join(' · ');
+  ui.resultadoTexto.textContent = historico.map((item) => item.rotulo).join(' · ');
   ui.impactos.replaceChildren(
-    criarImpacto(`${new Intl.NumberFormat(locale).format(moradores)} ${copy.residents}`),
-    criarImpacto(`${satisfacao}% ${copy.satisfaction}`),
+    criarImpacto(`${new Intl.NumberFormat('pt-BR').format(moradores)} moradores`),
+    criarImpacto(`${satisfacao}% de satisfação`),
   );
-  ui.proximo.textContent = copy.playAgain;
-  atualizarProgresso(100, copy.completed);
+  ui.proximo.textContent = 'Jogar novamente';
+  atualizarProgresso(100, 'Escola concluída');
   visaoGeral();
 }
 
@@ -402,9 +325,45 @@ function reiniciarJogo() {
   cidade.reiniciar();
   atualizarIndicadores();
   renderizarMissao();
+  voz.startMission(0);
 }
 
 ui.proximo.addEventListener('click', () => finalizado ? reiniciarJogo() : avancarMissao());
+ui.alternarOpcoes.addEventListener('click', () => {
+  const vaiMostrar = ui.escolhas.classList.contains('oculto');
+  ui.escolhas.classList.toggle('oculto', !vaiMostrar);
+  ui.alternarOpcoes.textContent = vaiMostrar ? 'Continuar falando com o Prefeito' : 'Prefiro escolher uma opção';
+});
+function sincronizarMute(mutado = voz.isMuted()) {
+  ui.promptMutar.setAttribute('aria-pressed', String(mutado));
+  ui.promptMutar.setAttribute('aria-label', mutado ? 'Ativar microfone' : 'Desativar microfone');
+  ui.promptMutar.classList.toggle('mutado', mutado);
+  ui.promptMutar.querySelector('b')!.textContent = mutado ? 'Ativar' : 'Mutar';
+  ui.promptStatus.textContent = mutado
+    ? 'Microfone desligado. Toque em Ativar para falar.'
+    : 'Pode falar; a cidade muda enquanto vocês definem a escola.';
+}
+
+function audioCidade() {
+  return window.cidadeAudio;
+}
+
+let vozAtiva = false;
+function marcarVoz(ativa: boolean) {
+  if (ativa === vozAtiva) return;
+  vozAtiva = ativa;
+  if (ativa) audioCidade()?.beginVoice();
+  else audioCidade()?.endVoice();
+}
+
+ui.promptMutar.addEventListener('click', () => {
+  sincronizarMute(voz.toggleMute());
+});
+ui.promptVoz.addEventListener('click', () => {
+  const pausada = voz.togglePause();
+  ui.promptVoz.classList.toggle('pausada', pausada);
+  ui.promptVoz.querySelector('b')!.textContent = pausada ? 'Continuar conversa' : 'Pausar conversa';
+});
 document.querySelector('#visao-geral')!.addEventListener('click', visaoGeral);
 document.querySelector('#focar-missao')!.addEventListener('click', () => focarMissao());
 
@@ -417,7 +376,7 @@ function sobreProjeto(evento: PointerEvent) {
   return raycaster.intersectObjects(cidade.alvosProjeto, true).length > 0;
 }
 canvas.addEventListener('pointermove', (evento) => { canvas.style.cursor = sobreProjeto(evento) ? 'pointer' : 'grab'; });
-canvas.addEventListener('click', (evento) => { if (sobreProjeto(evento)) focarMissao(0); });
+canvas.addEventListener('click', (evento) => { if (sobreProjeto(evento)) focarMissao(); });
 
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
@@ -442,7 +401,7 @@ function animar() {
     ui.tempo.textContent = `${String(Math.floor(segundo / 60)).padStart(2, '0')}:${String(segundo % 60).padStart(2, '0')}`;
     const horas = Math.floor(minutosCidade / 60) % 24;
     const minutos = Math.floor(minutosCidade % 60);
-    ui.relogio.textContent = `${GAME_COPY[idioma].day} · ${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}`;
+    ui.relogio.textContent = `Dia 1 · ${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}`;
   }
   renderer.render(cena, camera);
 }
@@ -454,22 +413,36 @@ async function iniciar() {
     focarEntrada();
     document.querySelector('#carregando')!.classList.add('oculto');
     animar();
-    const perfil = await mostrarEntrada();
-    jogador = perfil.playerName;
-    idioma = perfil.language;
+    jogador = await mostrarEntrada();
     jogoIniciado = true;
     controles.enabled = true;
-    atualizarIndicadores();
+    controles.enableRotate = true;
+    controles.enableZoom = true;
+    controles.enablePan = true;
     renderizarMissao();
+    sincronizarMute();
+    void voz.connect(jogador, {
+      onState: (estado) => {
+        document.querySelector('.fala-prefeito')?.classList.toggle('falando', estado === 'speaking');
+        marcarVoz(estado === 'speaking');
+        if (estado === 'connecting') ui.promptVoz.querySelector('b')!.textContent = 'Conectando conversa';
+        if (estado === 'listening' || estado === 'speaking') ui.promptVoz.querySelector('b')!.textContent = 'Pausar conversa';
+        if (estado === 'paused') ui.promptVoz.querySelector('b')!.textContent = 'Continuar conversa';
+        if (estado === 'error') ui.promptVoz.querySelector('b')!.textContent = 'Iniciar conversa';
+      },
+      onMayorText: (texto) => { ui.falaPrefeito.textContent = texto; },
+      onAction: executarAcaoVoz,
+    });
   } catch (erro) {
-    document.querySelector('#carregando')!.textContent = GAME_COPY[idioma].loadError;
+    document.querySelector('#carregando')!.textContent = 'Não foi possível carregar a cidade.';
     console.error(erro);
   }
 }
 
 (window as unknown as { cidadeViva: unknown }).cidadeViva = {
-  estado: () => ({ jogador, language: idioma, missao: missaoAtual + 1, resolvida, finalizado, moradores, satisfacao, recursos, ...cidade.estado() }),
+  estado: () => ({ jogador, missao: missaoAtual + 1, resolvida, finalizado, moradores, satisfacao, recursos, ...cidade.estado() }),
   escolher,
+  acaoVoz: executarAcaoVoz,
   avancarMissao,
   reiniciar: reiniciarJogo,
   focarMissao,
