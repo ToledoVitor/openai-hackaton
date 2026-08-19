@@ -113,16 +113,22 @@ export function evaluateMission(input: {
     if (input.extraction.criteria[criterion]?.met) candidate.add(criterion);
   }
 
+  const branchCriterion =
+    input.request.missionId === "new_school"
+      ? "school_branch_selected"
+      : input.request.missionId === "safe_path"
+        ? "path_branch_selected"
+        : input.request.missionId === "unexpected_event"
+          ? "service_priority_selected"
+          : "city_school_project_selected";
   if (input.extraction.choice === null) {
-    candidate.delete(
-      input.request.missionId === "new_school"
-        ? "school_branch_selected"
-        : input.request.missionId === "safe_path"
-          ? "path_branch_selected"
-          : input.request.missionId === "unexpected_event"
-            ? "service_priority_selected"
-            : "city_school_project_selected",
-    );
+    candidate.delete(branchCriterion);
+    if (input.request.missionId === "new_school") candidate.delete("school_branch_feature_defined");
+    if (input.request.missionId === "safe_path") candidate.delete("path_branch_requirements_defined");
+    if (input.request.missionId === "unexpected_event") candidate.delete("priority_reasoned");
+    if (input.request.missionId === "city_school") candidate.delete("project_constraints_defined");
+  } else {
+    candidate.add(branchCriterion);
   }
 
   if (input.request.missionId === "city_school") {
