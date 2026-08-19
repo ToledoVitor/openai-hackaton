@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { EvaluationRequest, PromptExtraction } from "../../domain/contracts";
 import { selectFallback } from "../../domain/fallback-bank";
@@ -102,6 +102,39 @@ describe("evaluatePrompt", () => {
     await expect(evaluatePrompt(request, dependencies({ extract }))).resolves.toEqual(
       selectFallback(["accessibleEntrance"]),
     );
+  });
+
+  it("propagates a deterministic quest-engine failure after valid extraction", async () => {
+    vi.resetModules();
+    vi.doMock("../../domain/quest-engine", async () => {
+      const actual = await vi.importActual<typeof import("../../domain/quest-engine")>(
+        "../../domain/quest-engine",
+      );
+      let calls = 0;
+
+      return {
+        ...actual,
+        evaluateQuest: (...input: Parameters<typeof actual.evaluateQuest>) => {
+          calls += 1;
+          if (calls === 1) {
+            throw new Error("quest engine defect");
+          }
+
+          return actual.evaluateQuest(...input);
+        },
+      };
+    });
+
+    try {
+      const { evaluatePrompt: evaluateWithFailingQuest } = await import("./evaluate-prompt");
+
+      await expect(
+        evaluateWithFailingQuest(request, dependencies({ extract: async () => validExtraction })),
+      ).rejects.toThrow("quest engine defect");
+    } finally {
+      vi.doUnmock("../../domain/quest-engine");
+      vi.resetModules();
+    }
   });
 
   it("propagates moderation unavailability without extracting", async () => {

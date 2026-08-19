@@ -39,17 +39,19 @@ export async function evaluatePrompt(
     });
   }
 
+  let extraction: PromptExtraction;
+
   try {
-    const extraction = promptExtractionSchema.parse(
+    extraction = promptExtractionSchema.parse(
       await dependencies.extraction.extract(request.prompt, request.safetyIdentifier),
     );
-
-    return evaluateQuest({
-      currentPassedNeeds: request.currentPassedNeeds,
-      extraction,
-      source: "live",
-    });
   } catch {
     return selectFallback(request.currentPassedNeeds);
   }
+
+  return evaluateQuest({
+    currentPassedNeeds: request.currentPassedNeeds,
+    extraction,
+    source: "live",
+  });
 }
