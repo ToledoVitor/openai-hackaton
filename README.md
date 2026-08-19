@@ -49,3 +49,5 @@ O áudio inicia após primeira interação do jogador. Controle no topo permite 
 ```bash
 npm run audio:preview
 ```
+
+## MIT license
