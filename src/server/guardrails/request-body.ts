@@ -27,12 +27,7 @@ export async function readJsonWithLimit(
   validateJsonContentType(request.headers.get("content-type"));
   validateDeclaredLength(request.headers.get("content-length"), maxBytes);
 
-  let bytes: Uint8Array;
-  try {
-    bytes = new Uint8Array(await request.arrayBuffer());
-  } catch {
-    throw new RequestBodyError("BODY_READ_FAILED");
-  }
+  const bytes = await readBodyWithLimit(request, maxBytes);
   if (bytes.byteLength === 0) {
     throw new RequestBodyError("EMPTY_BODY");
   }
@@ -73,4 +68,50 @@ function validateDeclaredLength(contentLength: string | null, maxBytes: number):
   if (Number(contentLength) > maxBytes) {
     throw new RequestBodyError("CONTENT_LENGTH_EXCEEDED");
   }
+}
+
+async function readBodyWithLimit(request: Request, maxBytes: number): Promise<Uint8Array> {
+  const body = request.body;
+  if (body === null || body === undefined) {
+    return new Uint8Array();
+  }
+
+  const reader = body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+
+      totalBytes += value.byteLength;
+      if (totalBytes > maxBytes) {
+        try {
+          await reader.cancel();
+        } catch {
+          // Preserve the stable oversized-body error if cancellation itself fails.
+        }
+        throw new RequestBodyError("BODY_TOO_LARGE");
+      }
+      chunks.push(value);
+    }
+  } catch (error) {
+    if (error instanceof RequestBodyError) {
+      throw error;
+    }
+    throw new RequestBodyError("BODY_READ_FAILED");
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
 }

@@ -54,6 +54,36 @@ describe("readJsonWithLimit", () => {
     });
   });
 
+  it("stops and cancels an oversized chunked stream at the byte threshold", async () => {
+    const chunks = [new TextEncoder().encode('{"a"'), new TextEncoder().encode(':1}'), new Uint8Array(50)];
+    let pulls = 0;
+    let cancelled = false;
+    const request = {
+      headers: new Headers({ "content-type": "application/json" }),
+      body: new ReadableStream<Uint8Array>(
+        {
+          pull(controller) {
+            pulls += 1;
+            const chunk = chunks.shift();
+            if (chunk === undefined) {
+              controller.close();
+              return;
+            }
+            controller.enqueue(chunk);
+          },
+          cancel() {
+            cancelled = true;
+          },
+        },
+        { highWaterMark: 0 },
+      ),
+    } as unknown as Request;
+
+    await expect(readJsonWithLimit(request, 4)).rejects.toMatchObject({ code: "BODY_TOO_LARGE" });
+    expect(pulls).toBe(2);
+    expect(cancelled).toBe(true);
+  });
+
   it.each([
     ["an empty body", "", "EMPTY_BODY"],
     ["malformed JSON", '{"private":"do not reveal"', "INVALID_JSON"],
@@ -80,7 +110,11 @@ describe("readJsonWithLimit", () => {
     const secret = "city-stream-secret-never-echo";
     const unreadableRequest = {
       headers: new Headers({ "content-type": "application/json" }),
-      arrayBuffer: () => Promise.reject(new Error(secret)),
+      body: new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.error(new Error(secret));
+        },
+      }),
     } as unknown as Request;
 
     await expect(readJsonWithLimit(unreadableRequest, 100)).rejects.toMatchObject({ code: "BODY_READ_FAILED" });
