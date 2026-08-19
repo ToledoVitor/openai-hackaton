@@ -1,5 +1,6 @@
 export const SAMPLE_RATE = 44_100;
 export const MUSIC_SECONDS = 48;
+export const MUSIC_BARS = 18;
 export const MUSIC_FRAMES = SAMPLE_RATE * MUSIC_SECONDS;
 export const TEMPO_BPM = 90;
 export const SECONDS_PER_BEAT = 60 / TEMPO_BPM;
