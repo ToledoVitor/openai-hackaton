@@ -42,3 +42,11 @@ Resolved: replaced the deprecated `environmentMatchGlobs` configuration with the
 Command: `npm test -- src/audio/__tests__/toolchain.test.ts && npm run typecheck && npm test`
 
 Output summary: all three commands exited 0; the focused Vitest run reported 1 passing test, TypeScript reported no errors, the full Vitest run reported 1 passing test, and no deprecation warning was emitted.
+
+## Fix round 1/5: Vite Node 22.0 compatibility
+
+Replaced the Vite 7 range with `^6.4.3`, the newest published Vite 6 release. Its locked engine range is `^18.0.0 || ^20.0.0 || >=22.0.0`, which accepts the workspace's supported Node 22.0 baseline. Added a smoke-test assertion that the installed Vite major is 6 and exposes that engine range.
+
+- RED command: `npm test -- src/audio/__tests__/toolchain.test.ts` — exited 1 before reinstall; the new compatibility test received installed Vite `7.3.6`, which did not match `/^6\\./`.
+- Install command: `npm install --cache /tmp/ai-city-mayor-npm-cache` — exited 0; added 3 packages, changed 1 package, and audit reported 0 vulnerabilities.
+- Verification command: `npm test -- src/audio/__tests__/toolchain.test.ts && npm run typecheck && npm test && npm audit && npm exec -- vite --version` — exited 0. Focused and full Vitest runs reported 2 passing tests, TypeScript reported no errors, audit reported `found 0 vulnerabilities`, and the CLI reported `vite/6.4.3 darwin-arm64 node-v22.19.0`; no warnings were emitted.
