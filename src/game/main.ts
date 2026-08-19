@@ -2,60 +2,180 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Cidade } from './cidade';
 import { mostrarEntrada } from './entrada';
+import type { Language } from '../domain/mission-contracts';
+
+type LocalizedText = Record<Language, string>;
 type Escolha = {
   id: string;
-  rotulo: string;
-  resultado: string;
+  rotulo: LocalizedText;
+  resultado: LocalizedText;
   satisfacao: number;
   recursos: number;
   moradores: number;
 };
 
 type Missao = {
-  titulo: string;
-  personagem: string;
-  pergunta: string;
+  titulo: LocalizedText;
+  personagem: LocalizedText;
+  pergunta: LocalizedText;
   escolhas: [Escolha, Escolha];
 };
 
 const MISSOES: Missao[] = [
   {
-    titulo: 'A Nova Escola',
-    personagem: 'Prefeito AI',
-    pergunta: 'A cidade cresceu e precisa de uma escola pública; qual projeto atende melhor o bairro?',
+    titulo: { portuguese: 'A Nova Escola', english: 'The New School' },
+    personagem: { portuguese: 'Prefeito AI', english: 'AI Mayor' },
+    pergunta: {
+      portuguese: 'A cidade cresceu e precisa de uma escola pública; qual projeto atende melhor o bairro?',
+      english: 'The city has grown and needs a public school; which project best serves the neighborhood?',
+    },
     escolhas: [
-      { id: 'escola-compacta', rotulo: 'Escola compacta no centro', resultado: 'O prédio aproveita a infraestrutura central e abre vagas rapidamente.', satisfacao: 3, recursos: -420_000, moradores: 120 },
-      { id: 'escola-patio', rotulo: 'Escola com pátio no bairro', resultado: 'O pátio cria espaço para esporte e aproxima a escola das famílias.', satisfacao: 6, recursos: -540_000, moradores: 180 },
+      {
+        id: 'escola-compacta',
+        rotulo: { portuguese: 'Escola compacta no centro', english: 'Compact downtown school' },
+        resultado: {
+          portuguese: 'O prédio aproveita a infraestrutura central e abre vagas rapidamente.',
+          english: 'The building uses downtown infrastructure and opens student places quickly.',
+        },
+        satisfacao: 3, recursos: -420_000, moradores: 120,
+      },
+      {
+        id: 'escola-patio',
+        rotulo: { portuguese: 'Escola com pátio no bairro', english: 'Neighborhood school with a yard' },
+        resultado: {
+          portuguese: 'O pátio cria espaço para esporte e aproxima a escola das famílias.',
+          english: 'The yard creates space for sports and brings the school closer to families.',
+        },
+        satisfacao: 6, recursos: -540_000, moradores: 180,
+      },
     ],
   },
   {
-    titulo: 'Caminho Seguro',
-    personagem: 'Engenheira Bia',
-    pergunta: 'O trânsito passa na porta da escola; como proteger os estudantes na chegada?',
+    titulo: { portuguese: 'Caminho Seguro', english: 'Safe Path' },
+    personagem: { portuguese: 'Engenheira Bia', english: 'Engineer Bia' },
+    pergunta: {
+      portuguese: 'O trânsito passa na porta da escola; como proteger os estudantes na chegada?',
+      english: 'Traffic passes the school entrance; how should students be protected on arrival?',
+    },
     escolhas: [
-      { id: 'semaforo', rotulo: 'Instalar semáforos inteligentes', resultado: 'Os cruzamentos agora organizam carros e pedestres nos horários de entrada.', satisfacao: 5, recursos: -90_000, moradores: 25 },
-      { id: 'rua-calma', rotulo: 'Criar uma rua calma e arborizada', resultado: 'Bancos e áreas verdes reduzem a velocidade e tornam o caminho mais acolhedor.', satisfacao: 4, recursos: -60_000, moradores: 40 },
+      {
+        id: 'semaforo',
+        rotulo: { portuguese: 'Instalar semáforos inteligentes', english: 'Install smart traffic lights' },
+        resultado: {
+          portuguese: 'Os cruzamentos agora organizam carros e pedestres nos horários de entrada.',
+          english: 'Crossings now organize cars and pedestrians during school arrival times.',
+        },
+        satisfacao: 5, recursos: -90_000, moradores: 25,
+      },
+      {
+        id: 'rua-calma',
+        rotulo: { portuguese: 'Criar uma rua calma e arborizada', english: 'Create a calm, tree-lined street' },
+        resultado: {
+          portuguese: 'Bancos e áreas verdes reduzem a velocidade e tornam o caminho mais acolhedor.',
+          english: 'Benches and green areas slow traffic and make the route more welcoming.',
+        },
+        satisfacao: 4, recursos: -60_000, moradores: 40,
+      },
     ],
   },
   {
-    titulo: 'O Imprevisto',
-    personagem: 'Agente Rui',
-    pergunta: 'A obra revelou baixa pressão de água e o lixo se acumulou; qual problema vem primeiro?',
+    titulo: { portuguese: 'O Imprevisto', english: 'The Unexpected Event' },
+    personagem: { portuguese: 'Agente Rui', english: 'Agent Rui' },
+    pergunta: {
+      portuguese: 'A obra revelou baixa pressão de água e o lixo se acumulou; qual problema vem primeiro?',
+      english: 'Construction revealed low water pressure while garbage piled up; which problem comes first?',
+    },
     escolhas: [
-      { id: 'agua', rotulo: 'Garantir o abastecimento de água', resultado: 'Uma nova torre estabiliza o abastecimento da escola e das casas próximas.', satisfacao: 3, recursos: -110_000, moradores: 55 },
-      { id: 'limpeza', rotulo: 'Organizar a coleta do bairro', resultado: 'O entorno fica limpo e ganha um ponto permanente de coleta organizada.', satisfacao: 5, recursos: -70_000, moradores: 30 },
+      {
+        id: 'agua',
+        rotulo: { portuguese: 'Garantir o abastecimento de água', english: 'Secure the water supply' },
+        resultado: {
+          portuguese: 'Uma nova torre estabiliza o abastecimento da escola e das casas próximas.',
+          english: 'A new water tower stabilizes supply for the school and nearby homes.',
+        },
+        satisfacao: 3, recursos: -110_000, moradores: 55,
+      },
+      {
+        id: 'limpeza',
+        rotulo: { portuguese: 'Organizar a coleta do bairro', english: 'Organize neighborhood waste collection' },
+        resultado: {
+          portuguese: 'O entorno fica limpo e ganha um ponto permanente de coleta organizada.',
+          english: 'The area becomes clean and gains a permanent organized collection point.',
+        },
+        satisfacao: 5, recursos: -70_000, moradores: 30,
+      },
     ],
   },
   {
-    titulo: 'A Escola da Cidade',
-    personagem: 'Educadora Nina',
-    pergunta: 'A escola está pronta; qual espaço deve aproximar educação, comunidade e futuro?',
+    titulo: { portuguese: 'A Escola da Cidade', english: 'The City School' },
+    personagem: { portuguese: 'Educadora Nina', english: 'Educator Nina' },
+    pergunta: {
+      portuguese: 'A escola está pronta; qual espaço deve aproximar educação, comunidade e futuro?',
+      english: 'The school is ready; which space should bring education, community, and the future together?',
+    },
     escolhas: [
-      { id: 'laboratorio', rotulo: 'Laboratório de inteligência artificial', resultado: 'O laboratório conecta estudantes a projetos de tecnologia para a cidade.', satisfacao: 6, recursos: -180_000, moradores: 60 },
-      { id: 'biblioteca', rotulo: 'Biblioteca e praça de leitura', resultado: 'A escola vira ponto de encontro para estudantes, famílias e moradores.', satisfacao: 7, recursos: -120_000, moradores: 90 },
+      {
+        id: 'laboratorio',
+        rotulo: { portuguese: 'Laboratório de inteligência artificial', english: 'Artificial intelligence lab' },
+        resultado: {
+          portuguese: 'O laboratório conecta estudantes a projetos de tecnologia para a cidade.',
+          english: 'The lab connects students with technology projects for the city.',
+        },
+        satisfacao: 6, recursos: -180_000, moradores: 60,
+      },
+      {
+        id: 'biblioteca',
+        rotulo: { portuguese: 'Biblioteca e praça de leitura', english: 'Library and reading plaza' },
+        resultado: {
+          portuguese: 'A escola vira ponto de encontro para estudantes, famílias e moradores.',
+          english: 'The school becomes a meeting place for students, families, and residents.',
+        },
+        satisfacao: 7, recursos: -120_000, moradores: 90,
+      },
     ],
   },
 ];
+
+const GAME_COPY = {
+  portuguese: {
+    mission: 'Missão',
+    of: 'de',
+    decisionApplied: 'Decisão aplicada',
+    satisfactionImpact: 'satisfação',
+    transformedCity: 'Ver cidade transformada',
+    nextMission: 'Próxima missão',
+    changedNotice: 'A cidade mudou com a sua decisão',
+    transformed: 'Cidade transformada',
+    finalTitle: 'Uma cidade que aprende',
+    managementResult: 'Resultado da gestão',
+    finalDescription: 'A escola abriu, o bairro evoluiu e cada escolha deixou uma marca visível na cidade.',
+    residents: 'moradores',
+    satisfaction: 'de satisfação',
+    playAgain: 'Jogar novamente',
+    completed: 'Quatro missões concluídas',
+    day: 'Dia 1',
+    loadError: 'Não foi possível carregar a cidade.',
+  },
+  english: {
+    mission: 'Mission',
+    of: 'of',
+    decisionApplied: 'Decision applied',
+    satisfactionImpact: 'satisfaction',
+    transformedCity: 'View transformed city',
+    nextMission: 'Next mission',
+    changedNotice: 'Your decision changed the city',
+    transformed: 'Transformed city',
+    finalTitle: 'A city that learns',
+    managementResult: 'Administration result',
+    finalDescription: 'The school opened, the neighborhood evolved, and every choice left a visible mark on the city.',
+    residents: 'residents',
+    satisfaction: 'satisfaction',
+    playAgain: 'Play again',
+    completed: 'Four missions completed',
+    day: 'Day 1',
+    loadError: 'The city could not be loaded.',
+  },
+} as const satisfies Record<Language, Record<string, string>>;
 
 const canvas = document.querySelector<HTMLCanvasElement>('#cidade')!;
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -116,15 +236,22 @@ let recursos = 2_400_000;
 let segundosJogo = 0;
 let avisoTimer = 0;
 let jogador = '';
+let idioma: Language = 'portuguese';
 let jogoIniciado = false;
 const historico: Escolha[] = [];
 
+function texto(conteudo: LocalizedText) {
+  return conteudo[idioma];
+}
+
 function formatarRecursos(valor: number) {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(valor);
+  const locale = idioma === 'portuguese' ? 'pt-BR' : 'en-US';
+  return new Intl.NumberFormat(locale, { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(valor);
 }
 
 function atualizarIndicadores() {
-  ui.moradores.textContent = new Intl.NumberFormat('pt-BR').format(moradores);
+  const locale = idioma === 'portuguese' ? 'pt-BR' : 'en-US';
+  ui.moradores.textContent = new Intl.NumberFormat(locale).format(moradores);
   ui.satisfacao.textContent = `${satisfacao}%`;
   ui.recursos.textContent = formatarRecursos(recursos);
 }
@@ -175,19 +302,20 @@ function renderizarMissao() {
   finalizado = false;
   resolvida = false;
   cidade.prepararMissao(missaoAtual);
-  ui.indice.textContent = `Missão ${missaoAtual + 1} de ${MISSOES.length}`;
-  ui.titulo.textContent = missao.titulo;
-  ui.personagem.textContent = missao.personagem;
-  ui.pergunta.textContent = missao.pergunta;
+  const copy = GAME_COPY[idioma];
+  ui.indice.textContent = `${copy.mission} ${missaoAtual + 1} ${copy.of} ${MISSOES.length}`;
+  ui.titulo.textContent = texto(missao.titulo);
+  ui.personagem.textContent = texto(missao.personagem);
+  ui.pergunta.textContent = texto(missao.pergunta);
   ui.escolhas.replaceChildren();
   ui.escolhas.classList.remove('oculto');
   ui.resultado.classList.add('oculto');
-  atualizarProgresso(Math.round((missaoAtual / MISSOES.length) * 100), missao.titulo);
+  atualizarProgresso(Math.round((missaoAtual / MISSOES.length) * 100), texto(missao.titulo));
 
   for (const escolha of missao.escolhas) {
     const botao = document.createElement('button');
     botao.type = 'button';
-    botao.textContent = escolha.rotulo;
+    botao.textContent = texto(escolha.rotulo);
     botao.dataset.escolha = escolha.id;
     botao.addEventListener('click', () => escolher(escolha.id));
     ui.escolhas.append(botao);
@@ -209,16 +337,17 @@ function escolher(id: string) {
   recursos += escolha.recursos;
   cidade.aplicarEscolha(escolha.id);
   atualizarIndicadores();
-  atualizarProgresso(Math.round(((missaoAtual + 1) / MISSOES.length) * 100), 'Decisão aplicada');
+  const copy = GAME_COPY[idioma];
+  atualizarProgresso(Math.round(((missaoAtual + 1) / MISSOES.length) * 100), copy.decisionApplied);
   ui.escolhas.classList.add('oculto');
   ui.resultado.classList.remove('oculto');
-  ui.resultadoTexto.textContent = escolha.resultado;
+  ui.resultadoTexto.textContent = texto(escolha.resultado);
   ui.impactos.replaceChildren(
-    criarImpacto(`+${escolha.satisfacao}% satisfação`),
+    criarImpacto(`+${escolha.satisfacao}% ${copy.satisfactionImpact}`),
     criarImpacto(`${escolha.recursos < 0 ? '−' : '+'} ${formatarRecursos(Math.abs(escolha.recursos))}`),
   );
-  ui.proximo.textContent = missaoAtual === MISSOES.length - 1 ? 'Ver cidade transformada' : 'Próxima missão';
-  mostrarAviso('A cidade mudou com a sua decisão');
+  ui.proximo.textContent = missaoAtual === MISSOES.length - 1 ? copy.transformedCity : copy.nextMission;
+  mostrarAviso(copy.changedNotice);
   focarMissao();
   return true;
 }
@@ -243,19 +372,21 @@ function avancarMissao() {
 function renderizarFinal() {
   finalizado = true;
   resolvida = false;
-  ui.indice.textContent = 'Cidade transformada';
-  ui.titulo.textContent = 'Uma cidade que aprende';
-  ui.personagem.textContent = 'Resultado da gestão';
-  ui.pergunta.textContent = 'A escola abriu, o bairro evoluiu e cada escolha deixou uma marca visível na cidade.';
+  const copy = GAME_COPY[idioma];
+  const locale = idioma === 'portuguese' ? 'pt-BR' : 'en-US';
+  ui.indice.textContent = copy.transformed;
+  ui.titulo.textContent = copy.finalTitle;
+  ui.personagem.textContent = copy.managementResult;
+  ui.pergunta.textContent = copy.finalDescription;
   ui.escolhas.classList.add('oculto');
   ui.resultado.classList.remove('oculto');
-  ui.resultadoTexto.textContent = historico.map((item) => item.rotulo).join(' · ');
+  ui.resultadoTexto.textContent = historico.map((item) => texto(item.rotulo)).join(' · ');
   ui.impactos.replaceChildren(
-    criarImpacto(`${new Intl.NumberFormat('pt-BR').format(moradores)} moradores`),
-    criarImpacto(`${satisfacao}% de satisfação`),
+    criarImpacto(`${new Intl.NumberFormat(locale).format(moradores)} ${copy.residents}`),
+    criarImpacto(`${satisfacao}% ${copy.satisfaction}`),
   );
-  ui.proximo.textContent = 'Jogar novamente';
-  atualizarProgresso(100, 'Quatro missões concluídas');
+  ui.proximo.textContent = copy.playAgain;
+  atualizarProgresso(100, copy.completed);
   visaoGeral();
 }
 
@@ -311,7 +442,7 @@ function animar() {
     ui.tempo.textContent = `${String(Math.floor(segundo / 60)).padStart(2, '0')}:${String(segundo % 60).padStart(2, '0')}`;
     const horas = Math.floor(minutosCidade / 60) % 24;
     const minutos = Math.floor(minutosCidade % 60);
-    ui.relogio.textContent = `Dia 1 · ${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}`;
+    ui.relogio.textContent = `${GAME_COPY[idioma].day} · ${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}`;
   }
   renderer.render(cena, camera);
 }
@@ -323,18 +454,21 @@ async function iniciar() {
     focarEntrada();
     document.querySelector('#carregando')!.classList.add('oculto');
     animar();
-    jogador = await mostrarEntrada();
+    const perfil = await mostrarEntrada();
+    jogador = perfil.playerName;
+    idioma = perfil.language;
     jogoIniciado = true;
     controles.enabled = true;
+    atualizarIndicadores();
     renderizarMissao();
   } catch (erro) {
-    document.querySelector('#carregando')!.textContent = 'Não foi possível carregar a cidade.';
+    document.querySelector('#carregando')!.textContent = GAME_COPY[idioma].loadError;
     console.error(erro);
   }
 }
 
 (window as unknown as { cidadeViva: unknown }).cidadeViva = {
-  estado: () => ({ jogador, missao: missaoAtual + 1, resolvida, finalizado, moradores, satisfacao, recursos, ...cidade.estado() }),
+  estado: () => ({ jogador, language: idioma, missao: missaoAtual + 1, resolvida, finalizado, moradores, satisfacao, recursos, ...cidade.estado() }),
   escolher,
   avancarMissao,
   reiniciar: reiniciarJogo,
