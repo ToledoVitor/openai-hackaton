@@ -1,15 +1,12 @@
 import { z } from "zod";
 
-const TRANSCRIPTION_SESSION_URL = "https://api.openai.com/v1/realtime/transcription_sessions";
+const REALTIME_CLIENT_SECRET_URL = "https://api.openai.com/v1/realtime/client_secrets";
 
-const transcriptionSessionSchema = z
-  .object({
-    client_secret: z.strictObject({
-      value: z.string().refine((value) => value.trim().length > 0),
-      expires_at: z.number().int().positive(),
-    }),
-  })
-  .passthrough();
+const clientSecretSchema = z.strictObject({
+  value: z.string().refine((value) => value.trim().length > 0),
+  expires_at: z.number().int().positive(),
+  session: z.object({ type: z.literal("transcription") }).passthrough(),
+});
 
 export class RealtimeCredentialError extends Error {
   constructor() {
@@ -25,19 +22,26 @@ export async function createRealtimeClientSecret(input: {
   const fetchImpl = input.fetchImpl ?? fetch;
 
   try {
-    const response = await fetchImpl(TRANSCRIPTION_SESSION_URL, {
+    const response = await fetchImpl(REALTIME_CLIENT_SECRET_URL, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${input.apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        input_audio_transcription: {
-          model: "gpt-4o-mini-transcribe",
-          language: "en",
+        session: {
+          type: "transcription",
+          audio: {
+            input: {
+              transcription: {
+                model: "gpt-4o-mini-transcribe",
+                language: "en",
+              },
+              noise_reduction: { type: "near_field" },
+              turn_detection: { type: "server_vad" },
+            },
+          },
         },
-        input_audio_noise_reduction: { type: "near_field" },
-        turn_detection: { type: "server_vad" },
       }),
     });
 
@@ -45,11 +49,11 @@ export async function createRealtimeClientSecret(input: {
       throw new RealtimeCredentialError();
     }
 
-    const session = transcriptionSessionSchema.parse(await response.json());
+    const clientSecret = clientSecretSchema.parse(await response.json());
 
     return {
-      value: session.client_secret.value,
-      expiresAt: session.client_secret.expires_at,
+      value: clientSecret.value,
+      expiresAt: clientSecret.expires_at,
     };
   } catch (error) {
     if (error instanceof RealtimeCredentialError) {
