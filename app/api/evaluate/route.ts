@@ -7,10 +7,15 @@ import {
 import { ModerationUnavailableError } from "../../../src/server/evaluation/errors";
 import { evaluatePrompt } from "../../../src/server/evaluation/evaluate-prompt";
 import { createOpenAIEvaluationGateway } from "../../../src/server/evaluation/openai-gateway";
+import {
+  readJsonWithLimit,
+} from "../../../src/server/guardrails";
 
 export const runtime = "nodejs";
 
 type Evaluate = (request: EvaluationRequest) => Promise<TurnResult>;
+
+const EVALUATION_BODY_LIMIT_BYTES = 16 * 1024;
 
 function json(body: unknown, status: number, cacheControl?: string): Response {
   return Response.json(body, {
@@ -24,7 +29,9 @@ export function createEvaluatePost(dependencies: { evaluate: Evaluate }) {
     let evaluationRequest: EvaluationRequest;
 
     try {
-      evaluationRequest = evaluationRequestSchema.parse(await request.json());
+      evaluationRequest = evaluationRequestSchema.parse(
+        await readJsonWithLimit(request, EVALUATION_BODY_LIMIT_BYTES),
+      );
     } catch {
       return json({ error: "invalid_request" }, 400);
     }

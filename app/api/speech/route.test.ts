@@ -42,7 +42,7 @@ describe("createSpeechPost", () => {
       }),
     ).resolves.toBe(audio);
 
-    expect(constructionOptions).toEqual([{ apiKey: projectKey, timeout: 15_000 }]);
+    expect(constructionOptions).toEqual([{ apiKey: projectKey, timeout: 15_000, maxRetries: 0 }]);
     expect(speechRequests).toEqual([
       {
         model: "gpt-4o-mini-tts",
@@ -72,6 +72,40 @@ describe("createSpeechPost", () => {
     expect(calls).toEqual(["requireClearSign"]);
     expect(Array.from(new Uint8Array(responseBytes))).toEqual([73, 68, 51, 4]);
     expect(new TextDecoder().decode(responseBytes)).not.toContain(projectKey);
+  });
+
+  it("rejects a streamed oversized JSON body without invoking speech generation", async () => {
+    let created = false;
+    const post = createSpeechPost({ createHintSpeech: async () => {
+      created = true;
+      return audio;
+    }});
+    let cancelled = false;
+    const chunks = [
+      new TextEncoder().encode('{"hintKey":"requireClearSign"}'),
+      new Uint8Array(2_000),
+    ];
+    const response = await post({
+      headers: new Headers({ "content-type": "application/json" }),
+      body: new ReadableStream<Uint8Array>({
+        pull(controller) {
+          const chunk = chunks.shift();
+          if (chunk === undefined) {
+            controller.close();
+            return;
+          }
+          controller.enqueue(chunk);
+        },
+        cancel() {
+          cancelled = true;
+        },
+      }, { highWaterMark: 0 }),
+    } as unknown as Request);
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({ error: "invalid_request" });
+    expect(created).toBe(false);
+    expect(cancelled).toBe(true);
   });
 
   it.each([

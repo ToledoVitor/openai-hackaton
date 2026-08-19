@@ -31,6 +31,26 @@ function request(body: string): Request {
 }
 
 describe("createEvaluatePost", () => {
+  it("rejects a declared oversized JSON body before evaluation", async () => {
+    let evaluated = false;
+    const post = createEvaluatePost({ evaluate: async () => {
+      evaluated = true;
+      return validResult;
+    }});
+    const response = await post(new Request("http://localhost/api/evaluate", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "content-length": "20000",
+      },
+      body: JSON.stringify(validRequest),
+    }));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({ error: "invalid_request" });
+    expect(evaluated).toBe(false);
+  });
+
   it("returns service_unavailable from the production handler when the project key is absent", async () => {
     const originalApiKey = process.env.OPENAI_API_KEY;
     delete process.env.OPENAI_API_KEY;
