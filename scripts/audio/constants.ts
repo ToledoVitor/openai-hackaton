@@ -1,0 +1,9 @@
+export const SAMPLE_RATE = 44_100;
+export const MUSIC_SECONDS = 48;
+export const MUSIC_FRAMES = SAMPLE_RATE * MUSIC_SECONDS;
+export const TEMPO_BPM = 90;
+export const SECONDS_PER_BEAT = 60 / TEMPO_BPM;
+export const BEATS_PER_BAR = 4;
+export const MASTER_PEAK = 10 ** (-1 / 20);
+export const TARGET_RMS_DBFS = -21; // restrained instrumental proxy for about -18 LUFS
+export const GENERATION_SEED = 20_260_819;
