@@ -40,8 +40,24 @@ button { font: inherit; }
 .indicadores span { color: #789095; font-size: 10px; text-transform: uppercase; letter-spacing: 1.1px; }
 .indicadores strong { margin-top: 4px; font-size: 14px; }
 .relogio { color: #537176; font-size: 12px; font-weight: 700; white-space: nowrap; }
-.audio-toggle { padding: 8px 11px; border: 0; border-radius: 999px; color: #315d62; background: rgba(22,141,130,.1); cursor: pointer; font-size: 11px; font-weight: 800; white-space: nowrap; }
+.audio-menu { position: relative; }
+.audio-toggle { display: flex; align-items: center; gap: 6px; padding: 8px 11px; border: 0; border-radius: 999px; color: #315d62; background: rgba(22,141,130,.1); cursor: pointer; font-size: 11px; font-weight: 800; white-space: nowrap; }
+.audio-toggle span { display: grid; width: 18px; height: 18px; place-items: center; border-radius: 50%; color: white; background: #168d82; font-size: 11px; }
 .audio-toggle:hover { color: white; background: #168d82; }
+.audio-toggle:hover span { color: #168d82; background: white; }
+.audio-painel { position: absolute; top: calc(100% + 17px); right: 0; width: 270px; padding: 16px; border: 2px solid rgba(255,255,255,.82); border-radius: 22px; background: rgba(255,253,247,.97); box-shadow: 0 22px 60px rgba(20,71,69,.24), inset 0 0 0 1px rgba(22,141,130,.08); backdrop-filter: blur(22px); }
+.audio-painel::before { position: absolute; top: -7px; right: 22px; width: 12px; height: 12px; border: 2px solid rgba(255,255,255,.82); border-right: 0; border-bottom: 0; background: rgba(255,253,247,.97); content: ""; transform: rotate(45deg); }
+.audio-painel-cabecalho { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.audio-painel-cabecalho strong, .audio-painel-cabecalho small { display: block; }
+.audio-painel-cabecalho strong { font-size: 13px; font-weight: 900; }
+.audio-painel-cabecalho small { margin-top: 2px; color: #789095; font-size: 9px; font-weight: 700; }
+.audio-master { padding: 7px 9px; border: 0; border-radius: 10px; color: #fff; background: #168d82; cursor: pointer; font-size: 9px; font-weight: 850; }
+.audio-master[aria-pressed="true"] { color: #315d62; background: #dfe9e5; }
+.audio-controle { display: block; margin-top: 12px; }
+.audio-controle > span { display: flex; justify-content: space-between; gap: 12px; color: #537176; font-size: 10px; font-weight: 800; }
+.audio-controle output { color: #168d82; font-variant-numeric: tabular-nums; }
+.audio-controle input { width: 100%; height: 4px; margin: 10px 0 2px; border-radius: 99px; accent-color: #168d82; cursor: pointer; }
+.audio-toggle:focus-visible, .audio-master:focus-visible, .audio-controle input:focus-visible { outline: 3px solid rgba(22,141,130,.3); outline-offset: 2px; }
 
 .projeto {
   position: fixed;
@@ -96,6 +112,7 @@ button { font: inherit; }
   .marca { min-width: 0; }
   .marca small, .indicadores div:not(:nth-child(2)), .relogio { display: none; }
   .audio-toggle { padding: 7px 9px; font-size: 10px; }
+  .audio-painel { top: calc(100% + 14px); width: min(270px, calc(100vw - 20px)); }
   .indicadores { margin-left: auto; margin-right: 0; }
   .projeto { left: 10px; bottom: 10px; width: calc(100vw - 20px); padding: 16px; }
   .projeto p { min-height: 0; }

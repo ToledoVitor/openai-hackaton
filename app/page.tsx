@@ -1,24 +1,28 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { createAudioManager } from '@/src/audio';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { createAudioManager, DEFAULT_AUDIO_PREFERENCES, type AudioPreferences } from '@/src/audio';
 
 export default function HomePage() {
   const audioRef = useRef<ReturnType<typeof createAudioManager> | null>(null);
-  const [audioMuted, setAudioMuted] = useState(false);
+  const [audioMenuOpen, setAudioMenuOpen] = useState(false);
+  const [audioPreferences, setAudioPreferences] = useState<AudioPreferences>({ ...DEFAULT_AUDIO_PREFERENCES });
 
   useEffect(() => {
     void import('@/src/game/main');
 
     const audio = createAudioManager();
     audioRef.current = audio;
-    setAudioMuted(audio.getPreferences().muted);
+    const preferencesFrame = window.requestAnimationFrame(() => {
+      setAudioPreferences({ ...audio.getPreferences() });
+    });
 
     const startAudio = () => audio.start();
     window.addEventListener('pointerdown', startAudio, { once: true });
     window.addEventListener('keydown', startAudio, { once: true });
 
     return () => {
+      window.cancelAnimationFrame(preferencesFrame);
       window.removeEventListener('pointerdown', startAudio);
       window.removeEventListener('keydown', startAudio);
       audio.stop();
@@ -29,10 +33,29 @@ export default function HomePage() {
   function toggleAudio() {
     const audio = audioRef.current;
     if (!audio) return;
-    const muted = !audioMuted;
+    const muted = !audioPreferences.muted;
     audio.start();
     audio.setMuted(muted);
-    setAudioMuted(muted);
+    setAudioPreferences((current) => ({ ...current, muted }));
+  }
+
+  function toggleAudioMenu() {
+    audioRef.current?.start();
+    setAudioMenuOpen((open) => !open);
+  }
+
+  function changeMusicVolume(event: ChangeEvent<HTMLInputElement>) {
+    const musicVolume = Number(event.target.value);
+    audioRef.current?.start();
+    audioRef.current?.setMusicVolume(musicVolume);
+    setAudioPreferences((current) => ({ ...current, musicVolume }));
+  }
+
+  function changeAmbienceVolume(event: ChangeEvent<HTMLInputElement>) {
+    const ambienceVolume = Number(event.target.value);
+    audioRef.current?.start();
+    audioRef.current?.setAmbienceVolume(ambienceVolume);
+    setAudioPreferences((current) => ({ ...current, ambienceVolume }));
   }
 
   return (
@@ -50,14 +73,67 @@ export default function HomePage() {
           <div><span>Recursos</span><strong id="recursos">R$ 2.400.000</strong></div>
         </div>
         <div className="relogio" id="relogio">Dia 1 · 09:00</div>
-        <button
-          className="audio-toggle"
-          type="button"
-          aria-pressed={audioMuted}
-          onClick={toggleAudio}
-        >
-          {audioMuted ? 'Ativar som' : 'Silenciar som'}
-        </button>
+        <div className="audio-menu">
+          <button
+            className="audio-toggle"
+            type="button"
+            aria-expanded={audioMenuOpen}
+            aria-controls="audio-controles"
+            onClick={toggleAudioMenu}
+          >
+            <span aria-hidden="true">♪</span>
+            {audioPreferences.muted ? 'Som desligado' : 'Som'}
+          </button>
+
+          {audioMenuOpen && (
+            <section className="audio-painel" id="audio-controles" aria-label="Controles de áudio">
+              <div className="audio-painel-cabecalho">
+                <div>
+                  <strong>Sons da cidade</strong>
+                  <small>Ajuste como preferir</small>
+                </div>
+                <button
+                  className="audio-master"
+                  type="button"
+                  aria-pressed={audioPreferences.muted}
+                  onClick={toggleAudio}
+                >
+                  {audioPreferences.muted ? 'Ativar' : 'Silenciar'}
+                </button>
+              </div>
+
+              <label className="audio-controle">
+                <span>
+                  Trilha sonora
+                  <output>{Math.round(audioPreferences.musicVolume * 100)}%</output>
+                </span>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={audioPreferences.musicVolume}
+                  onChange={changeMusicVolume}
+                />
+              </label>
+
+              <label className="audio-controle">
+                <span>
+                  Sons da cidade
+                  <output>{Math.round(audioPreferences.ambienceVolume * 100)}%</output>
+                </span>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={audioPreferences.ambienceVolume}
+                  onChange={changeAmbienceVolume}
+                />
+              </label>
+            </section>
+          )}
+        </div>
       </header>
 
       <section className="projeto" aria-labelledby="missao-titulo">

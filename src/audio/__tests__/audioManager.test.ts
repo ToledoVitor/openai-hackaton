@@ -18,7 +18,46 @@ describe("audio manager", () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  it("loops music and schedules existing ambience assets", async () => {
+  it("loops music at a soft default volume", () => {
+    const audio: FakeAudio[] = [];
+    const manager = createAudioManager({
+      createAudio: (src) => {
+        const instance = new FakeAudio(src);
+        audio.push(instance);
+        return instance;
+      },
+    });
+
+    manager.start();
+    expect(audio[0].src).toBe("/audio/music/cozy-city-loop.ogg");
+    expect(audio[0].loop).toBe(true);
+    expect(audio[0].volume).toBe(0.18);
+    expect(audio[0].play).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    [0, 10_999, 11_000],
+    [0.999_999, 29_999, 30_000],
+  ])("schedules city sounds between 11 and 30 seconds (random %s)", async (random, beforeDelay, delay) => {
+    const audio: FakeAudio[] = [];
+    const manager = createAudioManager({
+      createAudio: (src) => {
+        const instance = new FakeAudio(src);
+        audio.push(instance);
+        return instance;
+      },
+      random: () => random,
+    });
+
+    manager.start();
+    await vi.advanceTimersByTimeAsync(beforeDelay);
+    expect(audio).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(delay - beforeDelay);
+    expect(audio).toHaveLength(2);
+    expect(audio[1].play).toHaveBeenCalledOnce();
+  });
+
+  it("measures each city-sound interval from the previous sound start", async () => {
     const audio: FakeAudio[] = [];
     const manager = createAudioManager({
       createAudio: (src) => {
@@ -30,13 +69,9 @@ describe("audio manager", () => {
     });
 
     manager.start();
-    expect(audio[0].src).toBe("/audio/music/cozy-city-loop.ogg");
-    expect(audio[0].loop).toBe(true);
-    expect(audio[0].play).toHaveBeenCalledOnce();
-
-    await vi.advanceTimersByTimeAsync(8_000);
-    expect(audio[1].src).toBe("/audio/sfx/birds.ogg");
-    expect(audio[1].play).toHaveBeenCalledOnce();
+    await vi.advanceTimersByTimeAsync(22_000);
+    expect(audio).toHaveLength(3);
+    expect(audio[2].play).toHaveBeenCalledOnce();
   });
 
   it("applies mute, voice ducking, and persisted preferences", () => {
@@ -62,7 +97,7 @@ describe("audio manager", () => {
     manager.setMuted(true);
     expect(audio[0].muted).toBe(true);
     expect(storage.setItem).toHaveBeenLastCalledWith(
-      "ai-city-mayor.audio.v1",
+      "ai-city-mayor.audio.v2",
       JSON.stringify({ muted: true, musicVolume: 0.5, ambienceVolume: 0.25 }),
     );
   });

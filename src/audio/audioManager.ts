@@ -1,8 +1,8 @@
 import { AMBIENCE_ASSETS, MUSIC_ASSET, type AmbienceAsset } from "./catalog";
 
-const STORAGE_KEY = "ai-city-mayor.audio.v1";
-const MIN_AMBIENCE_DELAY_MS = 8_000;
-const MAX_AMBIENCE_DELAY_MS = 22_000;
+const STORAGE_KEY = "ai-city-mayor.audio.v2";
+const AMBIENCE_BASE_DELAY_MS = 10_000;
+const AMBIENCE_RANDOM_SECONDS = 20;
 const MUSIC_DUCK_GAIN = 10 ** (-8 / 20);
 const AMBIENCE_DUCK_GAIN = 10 ** (-10 / 20);
 
@@ -32,27 +32,31 @@ export type AudioManagerDependencies = {
   storage?: StorageLike;
 };
 
-const DEFAULT_PREFERENCES: AudioPreferences = {
+export const DEFAULT_AUDIO_PREFERENCES: Readonly<AudioPreferences> = {
   muted: false,
-  musicVolume: 0.35,
+  musicVolume: 0.18,
   ambienceVolume: 0.25,
 };
 
 const clamp = (value: number) => Math.min(1, Math.max(0, value));
 
 function loadPreferences(storage?: StorageLike): AudioPreferences {
-  if (!storage) return { ...DEFAULT_PREFERENCES };
+  if (!storage) return { ...DEFAULT_AUDIO_PREFERENCES };
 
   try {
     const saved = JSON.parse(storage.getItem(STORAGE_KEY) ?? "null") as Partial<AudioPreferences> | null;
-    if (!saved) return { ...DEFAULT_PREFERENCES };
+    if (!saved) return { ...DEFAULT_AUDIO_PREFERENCES };
     return {
       muted: typeof saved.muted === "boolean" ? saved.muted : false,
-      musicVolume: clamp(typeof saved.musicVolume === "number" ? saved.musicVolume : 0.35),
-      ambienceVolume: clamp(typeof saved.ambienceVolume === "number" ? saved.ambienceVolume : 0.25),
+      musicVolume: clamp(
+        typeof saved.musicVolume === "number" ? saved.musicVolume : DEFAULT_AUDIO_PREFERENCES.musicVolume,
+      ),
+      ambienceVolume: clamp(
+        typeof saved.ambienceVolume === "number" ? saved.ambienceVolume : DEFAULT_AUDIO_PREFERENCES.ambienceVolume,
+      ),
     };
   } catch {
-    return { ...DEFAULT_PREFERENCES };
+    return { ...DEFAULT_AUDIO_PREFERENCES };
   }
 }
 
@@ -105,7 +109,8 @@ export function createAudioManager(dependencies: AudioManagerDependencies = {}) 
 
   const scheduleNext = () => {
     if (!started) return;
-    const delay = MIN_AMBIENCE_DELAY_MS + Math.floor(random() * (MAX_AMBIENCE_DELAY_MS - MIN_AMBIENCE_DELAY_MS));
+    const randomSeconds = 1 + Math.floor(random() * AMBIENCE_RANDOM_SECONDS);
+    const delay = AMBIENCE_BASE_DELAY_MS + randomSeconds * 1_000;
     ambienceTimer = setTimer(playAmbience, delay);
   };
 
@@ -118,7 +123,6 @@ export function createAudioManager(dependencies: AudioManagerDependencies = {}) 
     effect.currentTime = 0;
     if (cutoffTimer) clearTimer(cutoffTimer);
     cutoffTimer = undefined;
-    scheduleNext();
   };
 
   const playAmbience = () => {
@@ -131,14 +135,15 @@ export function createAudioManager(dependencies: AudioManagerDependencies = {}) 
     updateVolumes();
     cutoffTimer = setTimer(finishEffect, asset.maxPlaybackMs);
     void effect.play().catch(finishEffect);
+    scheduleNext();
   };
 
   const start = () => {
-    if (started) return;
+    const firstStart = !started;
     started = true;
     updateVolumes();
     void music.play().catch(() => undefined);
-    scheduleNext();
+    if (firstStart) scheduleNext();
   };
 
   const stop = () => {
