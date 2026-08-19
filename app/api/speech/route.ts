@@ -12,13 +12,32 @@ export const runtime = "nodejs";
 const speechRequestSchema = z.object({ hintKey: z.enum(HINT_KEYS) }).strict();
 
 type CreateHintSpeech = (hintKey: HintKey) => Promise<ArrayBuffer>;
+type OpenAISpeechRequest = {
+  model: "gpt-4o-mini-tts";
+  voice: "coral";
+  input: string;
+  response_format: "mp3";
+};
+type OpenAISpeechClient = {
+  audio: {
+    speech: {
+      create(input: OpenAISpeechRequest): Promise<{ arrayBuffer(): Promise<ArrayBuffer> }>;
+    };
+  };
+};
+type OpenAISpeechClientFactory = (
+  options: ConstructorParameters<typeof OpenAI>[0],
+) => OpenAISpeechClient;
 
 function json(body: unknown, status: number): Response {
   return Response.json(body, { status });
 }
 
-function createOpenAISpeechGateway(apiKey: string): SpeechGateway {
-  const openai = new OpenAI({ apiKey });
+export function createOpenAISpeechGateway(
+  apiKey: string,
+  createClient: OpenAISpeechClientFactory = (options) => new OpenAI(options),
+): SpeechGateway {
+  const openai = createClient({ apiKey, timeout: 15_000 });
 
   return {
     create: async ({ responseFormat, ...input }) => {

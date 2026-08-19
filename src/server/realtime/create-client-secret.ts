@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 const REALTIME_CLIENT_SECRET_URL = "https://api.openai.com/v1/realtime/client_secrets";
+const REALTIME_CLIENT_SECRET_TIMEOUT_MS = 8_000;
 
 const clientSecretSchema = z.strictObject({
   value: z.string().refine((value) => value.trim().length > 0),
@@ -18,12 +19,17 @@ export class RealtimeCredentialError extends Error {
 export async function createRealtimeClientSecret(input: {
   apiKey: string;
   fetchImpl?: typeof fetch;
+  createTimeoutSignal?: (timeoutMs: number) => AbortSignal;
 }): Promise<{ value: string; expiresAt: number }> {
   const fetchImpl = input.fetchImpl ?? fetch;
+  const signal = (input.createTimeoutSignal ?? AbortSignal.timeout)(
+    REALTIME_CLIENT_SECRET_TIMEOUT_MS,
+  );
 
   try {
     const response = await fetchImpl(REALTIME_CLIENT_SECRET_URL, {
       method: "POST",
+      signal,
       headers: {
         Authorization: `Bearer ${input.apiKey}`,
         "Content-Type": "application/json",
