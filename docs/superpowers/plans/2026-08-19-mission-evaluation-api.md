@@ -6,13 +6,14 @@
 
 **Architecture:** A thin HTTP route validates requests and calls an orchestration service. OpenAI adapters handle moderation, strict semantic extraction, and temperature generation; pure mission modules own criteria, progression, feedback, fallback, and visual effects. All network dependencies are injected so default tests stay deterministic and offline.
 
-**Tech Stack:** Next.js App Router, TypeScript, OpenAI JavaScript SDK, Zod, Vitest, npm.
+**Tech Stack:** Existing Vinext/Next.js App Router application, strict TypeScript, OpenAI JavaScript SDK 7.x, Zod 4.x, Vitest 4.x, npm.
 
 **Spec:** `docs/superpowers/specs/2026-08-19-mission-evaluation-api-design.md`
 
 ## Global Constraints
 
 - Read OpenAI credentials only from server-side `OPENAI_API_KEY`.
+- Preserve existing `POST /api/evaluate` path, `readJsonWithLimit`, `Cache-Control: no-store`, and Cloudflare paid-route guard.
 - Accept language only as exact `portuguese` or `english`; never auto-detect or switch catalogs.
 - Accept prompts with 1–600 Unicode characters after trimming.
 - Keep API stateless; client sends allowed `satisfiedCriteria` IDs on every request.
@@ -22,104 +23,70 @@
 - Never persist or log prompts, transcripts, moderation results, model responses, or temperature output.
 - Use feedback catalogs, never model prose, for authoritative coaching.
 - Keep `docs/ASSET-EFFECT-CATALOG.md` synchronized with canonical effect-key type.
+- Keep existing Town Hall/game contracts working while introducing mission-evaluation contracts beside them; UI migration stays out of scope.
+- Reuse installed dependencies and existing test/build scripts; do not scaffold another application or add a parallel `src/app` tree.
 - UI, Realtime session setup, speech transport, Three.js rendering, accounts, databases, and analytics stay out of scope.
 
 ## File map
 
 ```text
-package.json                                      Runtime scripts and dependencies
-package-lock.json                                 Reproducible npm dependency graph
-.gitignore                                        Secret/build exclusions
-.env.example                                      Server secret name only
-tsconfig.json                                     Strict TypeScript configuration
-next-env.d.ts                                     Next.js generated type reference
-next.config.ts                                    Minimal Next configuration
-vitest.config.ts                                  Node test configuration
+src/domain/mission-contracts.ts                    New request/response schemas and 45 effect IDs
+src/domain/mission-contracts.test.ts               Validation and asset-catalog sync tests
+src/domain/missions/types.ts                       Internal mission interfaces
+src/domain/missions/mission-registry.ts            Paths, criteria, dependencies, and effects
+src/domain/missions/mission-registry.test.ts       Registry invariant tests
+src/domain/missions/feedback/english.ts            English deterministic coaching
+src/domain/missions/feedback/portuguese.ts         Portuguese deterministic coaching
+src/domain/missions/feedback/index.ts              Feedback selector
+src/domain/missions/evaluate-mission.ts            Pure progression engine
+src/domain/missions/evaluate-mission.test.ts       Pure behavior tests
+src/domain/missions/fallback/english.ts            Conservative English lexicon
+src/domain/missions/fallback/portuguese.ts         Conservative Portuguese lexicon
+src/domain/missions/fallback/index.ts              Fallback extraction
+src/domain/missions/fallback/index.test.ts         Fallback isolation and precision tests
 
-src/server/contracts/mission-evaluation.ts        Public request/response schemas and effect IDs
-src/server/contracts/mission-evaluation.test.ts   Contract, validation, and catalog-sync tests
-src/server/errors/evaluation-error.ts              Safe domain/HTTP error model
+src/server/evaluation/openai-gateway.ts            Extend existing moderation/extraction gateway
+src/server/evaluation/openai-gateway.test.ts       Existing gateway request/schema tests
+src/server/evaluation/temperature-trial.ts         Real sampling experiment
+src/server/evaluation/temperature-trial.test.ts    Parameter and failure tests
+src/server/evaluation/evaluate-prompt.ts           Replace Town Hall evaluator orchestration
+src/server/evaluation/evaluate-prompt.test.ts      Ordering, fallback, and failure tests
+src/server/evaluation/errors.ts                    Extend safe domain/HTTP errors
 
-src/server/missions/types.ts                      Internal mission interfaces
-src/server/missions/mission-registry.ts           Paths, criteria, dependencies, and effects
-src/server/missions/mission-registry.test.ts      Registry invariant tests
-src/server/missions/feedback/english.ts           English deterministic coaching
-src/server/missions/feedback/portuguese.ts        Portuguese deterministic coaching
-src/server/missions/feedback/index.ts             Feedback selector
-src/server/missions/evaluate-mission.ts           Pure progression engine
-src/server/missions/evaluate-mission.test.ts      Pure behavior tests
-src/server/missions/fallback/english.ts           Conservative English lexicon
-src/server/missions/fallback/portuguese.ts        Conservative Portuguese lexicon
-src/server/missions/fallback/index.ts             Fallback extraction
-src/server/missions/fallback/index.test.ts        Fallback isolation and precision tests
+app/api/evaluate/route.ts                          Evolve existing HTTP boundary in place
+app/api/evaluate/route.test.ts                     Existing route status/body tests
+src/server/guardrails/paid-route-rate-limit.ts     Preserve `/api/evaluate` Worker quota
+src/server/guardrails/paid-route-rate-limit.test.ts Guardrail regression tests
 
-src/server/openai/client.ts                       Lazy server-only OpenAI client
-src/server/openai/moderation.ts                   Moderation adapter
-src/server/openai/moderation.test.ts              Moderation request tests
-src/server/openai/prompt-extractor.ts             Dynamic strict schema and Responses call
-src/server/openai/prompt-extractor.test.ts        Extraction request/schema tests
-src/server/openai/temperature-trial.ts            Real sampling experiment
-src/server/openai/temperature-trial.test.ts       Parameter and failure tests
-
-src/server/evaluation/evaluate-request.ts         End-to-end orchestration
-src/server/evaluation/evaluate-request.test.ts    Ordering, fallback, and failure tests
-src/server/http/throttle.ts                       Best-effort per-instance throttle
-src/server/http/throttle.test.ts                  Window/limit tests
-src/app/api/missions/evaluate/route.ts             HTTP boundary
-src/app/api/missions/evaluate/route.test.ts        Route status/body tests
-
-src/server/missions/__fixtures__/semantic.ts      Fixed 64-case bilingual suite
-src/server/missions/semantic-fixtures.test.ts     Offline fixture shape/parity checks
-src/server/missions/semantic-fixtures.live.test.ts Opt-in live OpenAI checks
+src/evals/mission-prompt-fixtures.ts               Fixed 64-case bilingual suite
+src/evals/mission-fixture-runner.ts                 Offline/live fixture runner
+src/evals/mission-fixture-runner.test.ts            Offline fixture shape/parity checks
+src/evals/mission-fixtures.live.test.ts             Opt-in live OpenAI checks
 ```
 
 ---
 
-### Task 1: Runtime foundation and public contract
+### Task 1: Add mission contracts beside existing Town Hall contracts
 
 **Files:**
-- Create: `package.json`
-- Create: `package-lock.json`
-- Create: `.gitignore`
-- Create: `.env.example`
-- Create: `tsconfig.json`
-- Create: `next-env.d.ts`
-- Create: `next.config.ts`
-- Create: `vitest.config.ts`
-- Create: `src/server/contracts/mission-evaluation.ts`
-- Create: `src/server/contracts/mission-evaluation.test.ts`
-- Create: `src/server/errors/evaluation-error.ts`
+- Create: `src/domain/mission-contracts.ts`
+- Create: `src/domain/mission-contracts.test.ts`
+- Modify: `src/server/evaluation/errors.ts`
 
 **Interfaces:**
-- Consumes: approved spec and `docs/ASSET-EFFECT-CATALOG.md`.
+- Consumes: approved spec, `docs/ASSET-EFFECT-CATALOG.md`, and existing Zod conventions in `src/domain/contracts.ts`.
 - Produces: `evaluateMissionRequestSchema`, `EvaluateMissionRequest`, `EvaluateMissionResponse`, `MissionExtraction`, `TemperatureTrial`, `EffectKey`, `effectKeys`, and `EvaluationError`.
 
-- [ ] **Step 1: Scaffold npm/TypeScript test runtime**
+- [ ] **Step 1: Run existing baseline before changing contracts**
 
 Run:
 
 ```bash
-npm init -y
-npm install next@latest react@latest react-dom@latest openai@latest server-only@latest zod@latest
-npm install --save-dev typescript@latest vitest@latest @types/node@latest @types/react@latest @types/react-dom@latest
+npm test -- src/domain/contracts.test.ts
+npm run typecheck
 ```
 
-Replace generated scripts with:
-
-```json
-{
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest",
-    "test:run": "vitest run",
-    "test:live": "RUN_OPENAI_LIVE_TESTS=1 vitest run src/server/missions/semantic-fixtures.live.test.ts"
-  }
-}
-```
-
-Configure strict TypeScript with `target: "ES2022"`, `moduleResolution: "bundler"`, `resolveJsonModule: true`, `noEmit: true`, alias `@/* -> ./src/*`, and Next plugin. Configure Vitest for Node, globals disabled, and alias `@` to `src`. Add `.env*.local`, `.next`, `node_modules`, and coverage output to `.gitignore`; put only `OPENAI_API_KEY=` in `.env.example`.
+Expected: existing Town Hall contract tests and typecheck pass. Do not edit `package.json`, `tsconfig.json`, or app scaffolding.
 
 - [ ] **Step 2: Write failing request-schema and effect-catalog tests**
 
@@ -129,7 +96,7 @@ import { readFileSync } from "node:fs";
 import {
   effectKeys,
   evaluateMissionRequestSchema,
-} from "./mission-evaluation";
+} from "./mission-contracts";
 
 const valid = {
   missionId: "new_school",
@@ -177,11 +144,11 @@ describe("evaluateMissionRequestSchema", () => {
 
 - [ ] **Step 3: Run tests and confirm red state**
 
-Run: `npm run test:run -- src/server/contracts/mission-evaluation.test.ts`
+Run: `npm test -- src/domain/mission-contracts.test.ts`
 
-Expected: FAIL because `mission-evaluation.ts` does not exist.
+Expected: FAIL because `mission-contracts.ts` does not exist.
 
-- [ ] **Step 4: Implement public schemas, types, and safe error class**
+- [ ] **Step 4: Implement public schemas and extend safe error model**
 
 Define exact mission, step, language, status, choice, criterion, feedback, and temperature unions from spec. Export this exact canonical effect-key array:
 
@@ -210,11 +177,11 @@ export const effectKeys = [
 ] as const;
 ```
 
-Use Zod `.superRefine()` to enforce mission-step pairs and Mission 4 temperature rule. Trim prompt before length validation. Use `z.string().uuid()` for safety ID, positive integer attempt, unique bounded criterion strings, and `.strict()` objects. `EvaluationError` stores `status`, `code`, `retryable`, optional `field`, and optional `effectKeys`, but never raw input.
+Use Zod `.superRefine()` to enforce mission-step pairs and Mission 4 temperature rule. Trim prompt before length validation. Preserve existing safety-identifier format `/^[A-Za-z0-9_-]{16,128}$/` so installed clients remain valid; positive integer attempt, unique bounded criterion strings, and `.strict()` objects remain required. Add `EvaluationError` to existing `src/server/evaluation/errors.ts`; store `status`, `code`, `retryable`, optional `field`, and optional `effectKeys`, but never raw input. Do not remove or rename existing exports from `src/domain/contracts.ts`.
 
 - [ ] **Step 5: Run contract tests and typecheck**
 
-Run: `npm run test:run -- src/server/contracts/mission-evaluation.test.ts`
+Run: `npm test -- src/domain/contracts.test.ts src/domain/mission-contracts.test.ts`
 
 Expected: PASS.
 
@@ -225,19 +192,19 @@ Expected: PASS.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add package.json package-lock.json .gitignore .env.example tsconfig.json next-env.d.ts next.config.ts vitest.config.ts src/server/contracts src/server/errors
+git add src/domain/mission-contracts.ts src/domain/mission-contracts.test.ts src/server/evaluation/errors.ts
 git commit -m "feat: define mission evaluation contract"
 ```
 
 ### Task 2: Mission registry and bilingual feedback
 
 **Files:**
-- Create: `src/server/missions/types.ts`
-- Create: `src/server/missions/mission-registry.ts`
-- Create: `src/server/missions/mission-registry.test.ts`
-- Create: `src/server/missions/feedback/english.ts`
-- Create: `src/server/missions/feedback/portuguese.ts`
-- Create: `src/server/missions/feedback/index.ts`
+- Create: `src/domain/missions/types.ts`
+- Create: `src/domain/missions/mission-registry.ts`
+- Create: `src/domain/missions/mission-registry.test.ts`
+- Create: `src/domain/missions/feedback/english.ts`
+- Create: `src/domain/missions/feedback/portuguese.ts`
+- Create: `src/domain/missions/feedback/index.ts`
 
 **Interfaces:**
 - Consumes: contract types from Task 1.
@@ -247,7 +214,7 @@ git commit -m "feat: define mission evaluation contract"
 
 ```ts
 import { describe, expect, it } from "vitest";
-import { effectKeys } from "@/server/contracts/mission-evaluation";
+import { effectKeys } from "../mission-contracts";
 import { missionDefinitions } from "./mission-registry";
 
 describe("mission registry", () => {
@@ -274,7 +241,7 @@ describe("mission registry", () => {
 
 - [ ] **Step 2: Run registry test and confirm red state**
 
-Run: `npm run test:run -- src/server/missions/mission-registry.test.ts`
+Run: `npm test -- src/domain/missions/mission-registry.test.ts`
 
 Expected: FAIL because registry does not exist.
 
@@ -414,7 +381,7 @@ Feedback selector chooses first missing criterion in registry order. It never qu
 
 - [ ] **Step 6: Run registry tests and typecheck**
 
-Run: `npm run test:run -- src/server/missions/mission-registry.test.ts`
+Run: `npm test -- src/domain/missions/mission-registry.test.ts`
 
 Expected: PASS.
 
@@ -425,15 +392,15 @@ Expected: PASS.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/server/missions/types.ts src/server/missions/mission-registry.ts src/server/missions/mission-registry.test.ts src/server/missions/feedback
+git add src/domain/missions/types.ts src/domain/missions/mission-registry.ts src/domain/missions/mission-registry.test.ts src/domain/missions/feedback
 git commit -m "feat: define bilingual mission registry"
 ```
 
 ### Task 3: Pure deterministic mission evaluator
 
 **Files:**
-- Create: `src/server/missions/evaluate-mission.ts`
-- Create: `src/server/missions/evaluate-mission.test.ts`
+- Create: `src/domain/missions/evaluate-mission.ts`
+- Create: `src/domain/missions/evaluate-mission.test.ts`
 
 **Interfaces:**
 - Consumes: `EvaluateMissionRequest`, `MissionExtraction`, `TemperatureTrial`, registry, and feedback selector.
@@ -553,7 +520,7 @@ Add table cases for zero improvement, repeated criteria, both paths in all missi
 
 - [ ] **Step 2: Run evaluator tests and confirm red state**
 
-Run: `npm run test:run -- src/server/missions/evaluate-mission.test.ts`
+Run: `npm test -- src/domain/missions/evaluate-mission.test.ts`
 
 Expected: FAIL because evaluator does not exist.
 
@@ -565,45 +532,38 @@ Mission 4 automatically grants `temperature_provided` for a schema-valid request
 
 - [ ] **Step 4: Run evaluator and contract tests**
 
-Run: `npm run test:run -- src/server/missions/evaluate-mission.test.ts src/server/contracts/mission-evaluation.test.ts`
+Run: `npm test -- src/domain/missions/evaluate-mission.test.ts src/domain/mission-contracts.test.ts`
 
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/server/missions/evaluate-mission.ts src/server/missions/evaluate-mission.test.ts
+git add src/domain/missions/evaluate-mission.ts src/domain/missions/evaluate-mission.test.ts
 git commit -m "feat: evaluate mission progress deterministically"
 ```
 
 ### Task 4: Moderation and strict semantic extraction adapters
 
 **Files:**
-- Create: `src/server/openai/client.ts`
-- Create: `src/server/openai/moderation.ts`
-- Create: `src/server/openai/moderation.test.ts`
-- Create: `src/server/openai/prompt-extractor.ts`
-- Create: `src/server/openai/prompt-extractor.test.ts`
+- Modify: `src/server/evaluation/openai-gateway.ts`
+- Modify: `src/server/evaluation/openai-gateway.test.ts`
 
 **Interfaces:**
 - Consumes: `MissionDefinition`, `Language`, `MissionExtraction`, and OpenAI SDK.
-- Produces: `getOpenAIClient()`, `moderatePrompt(input, client, signal)`, `extractPrompt(input, client, signal)`, and injectable `OpenAIClientLike` interfaces.
+- Produces: extended `OpenAIEvaluationGateway.isFlagged(prompt)` and `extract(request, definition)` while preserving injected `OpenAIEvaluationClient` factory.
 
 - [ ] **Step 1: Write failing moderation request test**
 
 ```ts
-it("uses omni moderation and returns flagged state", async () => {
+it("keeps omni moderation before mission extraction", async () => {
   const create = vi.fn().mockResolvedValue({ results: [{ flagged: true }] });
-  const result = await moderatePrompt(
-    { prompt: "input" },
-    { moderations: { create } },
-    AbortSignal.timeout(100),
-  );
-  expect(create).toHaveBeenCalledWith(
-    { model: "omni-moderation-latest", input: "input" },
-    { signal: expect.any(AbortSignal) },
-  );
-  expect(result).toBe("flagged");
+  const gateway = new OpenAIEvaluationGateway({
+    moderations: { create },
+    responses: { parse: vi.fn() },
+  });
+  await expect(gateway.isFlagged("input")).resolves.toBe(true);
+  expect(create).toHaveBeenCalledWith({ model: "omni-moderation-latest", input: "input" });
 });
 ```
 
@@ -617,13 +577,12 @@ expect(parse).toHaveBeenCalledWith(
     model: "gpt-5.6-luna",
     reasoning: { effort: "low" },
     store: false,
-    safety_identifier: input.safetyIdentifier,
+    safety_identifier: request.safetyIdentifier,
     input: [
       expect.objectContaining({ role: "developer" }),
-      { role: "user", content: input.prompt },
+      expect.objectContaining({ role: "user" }),
     ],
   }),
-  { signal: expect.any(AbortSignal) },
 );
 ```
 
@@ -631,19 +590,17 @@ Also assert Portuguese request receives Portuguese developer instructions, Engli
 
 - [ ] **Step 3: Run adapter tests and confirm red state**
 
-Run: `npm run test:run -- src/server/openai/moderation.test.ts src/server/openai/prompt-extractor.test.ts`
+Run: `npm test -- src/server/evaluation/openai-gateway.test.ts`
 
-Expected: FAIL because adapters do not exist.
+Expected: FAIL because existing gateway still uses Town Hall extraction schema and lacks language/mission context.
 
-- [ ] **Step 4: Implement lazy client and adapters**
+- [ ] **Step 4: Extend existing gateway without duplicating client setup**
 
-`client.ts` must include `import "server-only"`, lazily construct `new OpenAI({ apiKey: process.env.OPENAI_API_KEY })`, and throw `EvaluationError(500, "internal_error", false)` when key is absent. Do not create client at module import time.
-
-In extractor, import `zodTextFormat` from `openai/helpers/zod`, dynamically build a strict Zod object whose criterion properties come from selected registry definition, then call `client.responses.parse()` with `zodTextFormat(schema, "mission_extraction")`. Keep raw prompt only in outbound request; never log it. Validate parsed output again before returning.
+Keep `createOpenAIEvaluationGateway(apiKey)` and its existing `{ timeout: 8_000, maxRetries: 0 }` client construction. In `extract`, import `zodTextFormat` from `openai/helpers/zod`, dynamically build a strict Zod object whose criterion properties come from selected registry definition, then call existing `client.responses.parse()` with `zodTextFormat(schema, "mission_extraction")`. Use selected-language developer instruction, preserve `gpt-5.6-luna`, `store: false`, low reasoning, and `safety_identifier`. Keep raw prompt only in outbound request; never log it. Validate parsed output again before returning.
 
 - [ ] **Step 5: Run adapter tests and typecheck**
 
-Run: `npm run test:run -- src/server/openai/moderation.test.ts src/server/openai/prompt-extractor.test.ts`
+Run: `npm test -- src/server/evaluation/openai-gateway.test.ts`
 
 Expected: PASS.
 
@@ -654,17 +611,17 @@ Expected: PASS. If installed SDK signatures differ from current official example
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/server/openai/client.ts src/server/openai/moderation.ts src/server/openai/moderation.test.ts src/server/openai/prompt-extractor.ts src/server/openai/prompt-extractor.test.ts
+git add src/server/evaluation/openai-gateway.ts src/server/evaluation/openai-gateway.test.ts
 git commit -m "feat: add moderated structured prompt extraction"
 ```
 
 ### Task 5: Conservative bilingual fallback
 
 **Files:**
-- Create: `src/server/missions/fallback/english.ts`
-- Create: `src/server/missions/fallback/portuguese.ts`
-- Create: `src/server/missions/fallback/index.ts`
-- Create: `src/server/missions/fallback/index.test.ts`
+- Create: `src/domain/missions/fallback/english.ts`
+- Create: `src/domain/missions/fallback/portuguese.ts`
+- Create: `src/domain/missions/fallback/index.ts`
+- Create: `src/domain/missions/fallback/index.test.ts`
 
 **Interfaces:**
 - Consumes: validated request and mission definition.
@@ -716,7 +673,7 @@ it("does not guess a branch when both paths appear", () => {
 
 - [ ] **Step 2: Run fallback tests and confirm red state**
 
-Run: `npm run test:run -- src/server/missions/fallback/index.test.ts`
+Run: `npm test -- src/domain/missions/fallback/index.test.ts`
 
 Expected: FAIL because fallback does not exist.
 
@@ -748,22 +705,22 @@ Return `null` when mission goal cannot be established. Fill every required crite
 
 - [ ] **Step 4: Run fallback tests**
 
-Run: `npm run test:run -- src/server/missions/fallback/index.test.ts`
+Run: `npm test -- src/domain/missions/fallback/index.test.ts`
 
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/server/missions/fallback
+git add src/domain/missions/fallback
 git commit -m "feat: add bilingual mission fallback"
 ```
 
 ### Task 6: Real temperature trial
 
 **Files:**
-- Create: `src/server/openai/temperature-trial.ts`
-- Create: `src/server/openai/temperature-trial.test.ts`
+- Create: `src/server/evaluation/temperature-trial.ts`
+- Create: `src/server/evaluation/temperature-trial.test.ts`
 
 **Interfaces:**
 - Consumes: Mission 4 request, OpenAI client-like object, abort signal.
@@ -815,7 +772,7 @@ Add tests for four observation keys, explicit Portuguese/English developer text,
 
 - [ ] **Step 2: Run tests and confirm red state**
 
-Run: `npm run test:run -- src/server/openai/temperature-trial.test.ts`
+Run: `npm test -- src/server/evaluation/temperature-trial.test.ts`
 
 Expected: FAIL because temperature trial does not exist.
 
@@ -825,7 +782,7 @@ Use exact map `{ low: 0.2, medium: 0.7, high: 1.2 }`. Prompt developer role to g
 
 - [ ] **Step 4: Run temperature tests and typecheck**
 
-Run: `npm run test:run -- src/server/openai/temperature-trial.test.ts`
+Run: `npm test -- src/server/evaluation/temperature-trial.test.ts`
 
 Expected: PASS.
 
@@ -836,26 +793,26 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/server/openai/temperature-trial.ts src/server/openai/temperature-trial.test.ts
+git add src/server/evaluation/temperature-trial.ts src/server/evaluation/temperature-trial.test.ts
 git commit -m "feat: run real mission temperature trials"
 ```
 
 ### Task 7: Evaluation orchestration
 
 **Files:**
-- Create: `src/server/evaluation/evaluate-request.ts`
-- Create: `src/server/evaluation/evaluate-request.test.ts`
+- Modify: `src/server/evaluation/evaluate-prompt.ts`
+- Modify: `src/server/evaluation/evaluate-prompt.test.ts`
 
 **Interfaces:**
 - Consumes: moderation, extraction, fallback, temperature trial, pure evaluator, and validated request.
-- Produces: `evaluateRequest(request, dependencies?): Promise<EvaluateMissionResponse>` and `EvaluationDependencies`.
+- Produces: evolved `evaluatePrompt(request, dependencies): Promise<EvaluateMissionResponse>` and `EvaluationDependencies`.
 
 ```ts
 type EvaluationDependencies = {
-  moderate: (request: EvaluateMissionRequest, signal: AbortSignal) => Promise<"allowed" | "flagged">;
-  extract: (request: EvaluateMissionRequest, definition: MissionDefinition, signal: AbortSignal) => Promise<MissionExtraction>;
+  moderate: (request: EvaluateMissionRequest) => Promise<"allowed" | "flagged">;
+  extract: (request: EvaluateMissionRequest, definition: MissionDefinition) => Promise<MissionExtraction>;
   fallback: (request: EvaluateMissionRequest, definition: MissionDefinition) => MissionExtraction | null;
-  temperatureTrial: (request: EvaluateMissionRequest, signal: AbortSignal) => Promise<TemperatureTrial>;
+  temperatureTrial: (request: EvaluateMissionRequest) => Promise<TemperatureTrial>;
 };
 ```
 
@@ -903,13 +860,13 @@ it("moderates before starting any model evaluation", async () => {
     moderate: async () => { calls.push("moderate"); return "allowed"; },
     extract: async () => { calls.push("extract"); return completeExtraction(); },
   });
-  await evaluateRequest(request(), dependencies);
+  await evaluatePrompt(request(), dependencies);
   expect(calls).toEqual(["moderate", "extract"]);
 });
 
 it("never evaluates flagged input", async () => {
   const extract = vi.fn();
-  const result = await evaluateRequest(request(), deps({
+  const result = await evaluatePrompt(request(), deps({
     moderate: async () => "flagged",
     extract,
   }));
@@ -919,7 +876,7 @@ it("never evaluates flagged input", async () => {
 });
 
 it("uses transparent fallback after extraction failure", async () => {
-  const result = await evaluateRequest(request(), deps({
+  const result = await evaluatePrompt(request(), deps({
     moderate: async () => "allowed",
     extract: async () => { throw new Error("timeout"); },
     fallback: () => explicitFallbackExtraction(),
@@ -932,17 +889,17 @@ Add tests: moderation failure -> `EvaluationError(503, "moderation_unavailable",
 
 - [ ] **Step 2: Run orchestration tests and confirm red state**
 
-Run: `npm run test:run -- src/server/evaluation/evaluate-request.test.ts`
+Run: `npm test -- src/server/evaluation/evaluate-prompt.test.ts`
 
-Expected: FAIL because orchestration does not exist.
+Expected: FAIL because existing orchestration still accepts Town Hall contracts.
 
-- [ ] **Step 3: Implement orchestrator with injected defaults**
+- [ ] **Step 3: Evolve existing injected orchestrator**
 
-Create one 4-second moderation signal. After allowed moderation, create independent 8-second signals and run extraction plus optional temperature generation concurrently with `Promise.all`. Convert extraction failure to fallback; do not fallback around moderation. Pass live/fallback extraction into pure evaluator. Use default dependencies backed by lazy OpenAI client, but let tests pass fakes.
+Keep moderation first. After allowed moderation, run extraction plus optional temperature generation concurrently with `Promise.all`; adapters retain existing bounded OpenAI client timeout. Convert extraction failure to fallback; do not fallback around moderation. Pass live/fallback extraction into pure evaluator. Preserve dependency injection and `ModerationUnavailableError` behavior used by route tests.
 
 - [ ] **Step 4: Run orchestration and all unit tests**
 
-Run: `npm run test:run`
+Run: `npm test`
 
 Expected: PASS; live test file remains skipped unless environment flag is set.
 
@@ -953,28 +910,27 @@ git add src/server/evaluation
 git commit -m "feat: orchestrate mission evaluation safely"
 ```
 
-### Task 8: Throttle and HTTP route
+### Task 8: Existing paid-route guard and HTTP route
 
 **Files:**
-- Create: `src/server/http/throttle.ts`
-- Create: `src/server/http/throttle.test.ts`
-- Create: `src/app/api/missions/evaluate/route.ts`
-- Create: `src/app/api/missions/evaluate/route.test.ts`
+- Modify: `app/api/evaluate/route.ts`
+- Modify: `app/api/evaluate/route.test.ts`
+- Modify: `src/server/guardrails/paid-route-rate-limit.test.ts`
 
 **Interfaces:**
-- Consumes: request schema, `EvaluationError`, and `evaluateRequest`.
-- Produces: `consumeThrottle(identifier, now?)`, `POST(request)`, and stable JSON/HTTP mapping.
+- Consumes: mission request schema, `EvaluationError`, evolved `evaluatePrompt`, existing `readJsonWithLimit`, and existing Worker paid-route guard.
+- Produces: preserved `POST /api/evaluate`, `createEvaluatePost`, and stable JSON/HTTP mapping.
 
-- [ ] **Step 1: Write failing throttle tests**
+- [ ] **Step 1: Preserve existing Cloudflare route quota test**
 
 ```ts
-it("allows 12 requests per identifier in 60 seconds", () => {
-  const limiter = createThrottle({ limit: 12, windowMs: 60_000 });
-  for (let index = 0; index < 12; index += 1) {
-    expect(limiter.consume("550e8400-e29b-41d4-a716-446655440000", 1_000)).toBe(true);
+it("keeps /api/evaluate limited to 10 paid requests per Cloudflare client", () => {
+  const guard = createPaidRouteRateLimitGuard({ now: () => 1_000 });
+  const client = { cf: {}, connectingIp: "203.0.113.10" };
+  for (let index = 0; index < 10; index += 1) {
+    expect(guard(request("/api/evaluate", client))).toBeUndefined();
   }
-  expect(limiter.consume("550e8400-e29b-41d4-a716-446655440000", 1_000)).toBe(false);
-  expect(limiter.consume("550e8400-e29b-41d4-a716-446655440000", 61_001)).toBe(true);
+  expect(guard(request("/api/evaluate", client))?.status).toBe(429);
 });
 ```
 
@@ -983,15 +939,11 @@ it("allows 12 requests per identifier in 60 seconds", () => {
 Mock orchestration before importing route, then use this request helper:
 
 ```ts
-vi.mock("@/server/evaluation/evaluate-request", () => ({
-  evaluateRequest: vi.fn(),
-}));
-
-const post = (body: unknown) => POST(new Request("http://localhost/api/missions/evaluate", {
+const postRequest = (body: unknown) => new Request("http://localhost/api/evaluate", {
   method: "POST",
   headers: { "content-type": "application/json" },
   body: JSON.stringify(body),
-}));
+});
 
 const validBody = {
   missionId: "new_school", stepId: "design", language: "english",
@@ -1005,7 +957,8 @@ it.each([
   [{ ...validBody, missionId: "city_school", stepId: "creative_design" }, 400, "temperature_required"],
   [{ ...validBody, temperatureChoice: "low" }, 400, "temperature_not_allowed"],
 ] as const)("maps validation failure", async (body, status, code) => {
-  const response = await post(body);
+  const post = createEvaluatePost({ evaluate: vi.fn() });
+  const response = await post(postRequest(body));
   expect(response.status).toBe(status);
   expect(await response.json()).toMatchObject({ error: { code } });
 });
@@ -1015,17 +968,17 @@ Add explicit cases: valid request -> `200`; malformed JSON -> `400 invalid_reque
 
 - [ ] **Step 3: Run HTTP tests and confirm red state**
 
-Run: `npm run test:run -- src/server/http/throttle.test.ts src/app/api/missions/evaluate/route.test.ts`
+Run: `npm test -- src/server/guardrails/paid-route-rate-limit.test.ts app/api/evaluate/route.test.ts`
 
-Expected: FAIL because throttle and route do not exist.
+Expected: route contract cases FAIL because existing route still parses Town Hall request shape; paid-route guard remains green.
 
 - [ ] **Step 4: Implement route boundary**
 
-Export `runtime = "nodejs"`. Parse JSON once, safe-parse with Zod, map issue paths to exact error codes, throttle only after valid UUID is available, call `evaluateRequest`, and return `Response.json`. Never log request body. Maintain module-local fixed-window map, prune expired entries on consume, and document in code that serverless instances do not share it.
+Keep `runtime = "nodejs"`, 16 KiB `readJsonWithLimit`, `Cache-Control: no-store`, key-absence behavior, and injected `createEvaluatePost`. Parse mission schema, map issue paths to exact error codes, call evolved `evaluatePrompt`, and return `Response.json`. Never log request body. Do not add route-local throttling; `worker/index.ts` already applies `createPaidRouteRateLimitGuard` to `/api/evaluate` before paid calls.
 
 - [ ] **Step 5: Run route tests, all tests, and typecheck**
 
-Run: `npm run test:run`
+Run: `npm test`
 
 Expected: PASS.
 
@@ -1036,16 +989,17 @@ Expected: PASS.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/server/http src/app/api/missions/evaluate
+git add app/api/evaluate/route.ts app/api/evaluate/route.test.ts src/server/guardrails/paid-route-rate-limit.test.ts
 git commit -m "feat: expose mission evaluation API"
 ```
 
 ### Task 9: Bilingual semantic fixtures and release gates
 
 **Files:**
-- Create: `src/server/missions/__fixtures__/semantic.ts`
-- Create: `src/server/missions/semantic-fixtures.test.ts`
-- Create: `src/server/missions/semantic-fixtures.live.test.ts`
+- Create: `src/evals/mission-prompt-fixtures.ts`
+- Create: `src/evals/mission-fixture-runner.ts`
+- Create: `src/evals/mission-fixture-runner.test.ts`
+- Create: `src/evals/mission-fixtures.live.test.ts`
 - Modify: `README.md`
 
 **Interfaces:**
@@ -1076,7 +1030,7 @@ Add parity assertion pairing fixtures by `missionId + kind`: expected choice, sa
 
 - [ ] **Step 2: Run fixture test and confirm red state**
 
-Run: `npm run test:run -- src/server/missions/semantic-fixtures.test.ts`
+Run: `npm test -- src/evals/mission-fixture-runner.test.ts`
 
 Expected: FAIL because fixtures do not exist.
 
@@ -1124,19 +1078,20 @@ Add README section:
 ## Mission Evaluation API
 
 Copy `.env.example` to `.env.local`, set server-only `OPENAI_API_KEY`, then run `npm run dev`.
-The endpoint is `POST /api/missions/evaluate`; request and response contracts live in the mission evaluation design spec.
+The endpoint is `POST /api/evaluate`; request and response contracts live in the mission evaluation design spec.
 
 Verification:
 
-- `npm run test:run`
+- `npm test`
 - `npm run typecheck`
+- `npm run lint`
 - `npm run build`
-- `npm run test:live` only when intentional live OpenAI calls are acceptable
+- `RUN_OPENAI_LIVE_TESTS=1 npm test -- src/evals/mission-fixtures.live.test.ts` only when intentional live OpenAI calls are acceptable
 ```
 
 - [ ] **Step 13: Run full release gates**
 
-Run: `npm run test:run`
+Run: `npm test`
 
 Expected: PASS with 64-fixture shape/parity suite; live suite skipped.
 
@@ -1144,9 +1099,13 @@ Run: `npm run typecheck`
 
 Expected: PASS.
 
+Run: `npm run lint`
+
+Expected: PASS.
+
 Run: `npm run build`
 
-Expected: PASS; route listed as `ƒ /api/missions/evaluate` or current Next dynamic-route equivalent.
+Expected: PASS; existing `/api/evaluate` route remains present in Vinext build output.
 
 Run: `rg -n "OPENAI_API_KEY|sk-[A-Za-z0-9_-]+" .next/static .next/server/app 2>/dev/null`
 
@@ -1155,13 +1114,13 @@ Expected: no API key value and no key-shaped secret in client/static output. Env
 - [ ] **Step 14: Commit**
 
 ```bash
-git add src/server/missions/__fixtures__ src/server/missions/semantic-fixtures.test.ts src/server/missions/semantic-fixtures.live.test.ts README.md
+git add src/evals/mission-prompt-fixtures.ts src/evals/mission-fixture-runner.ts src/evals/mission-fixture-runner.test.ts src/evals/mission-fixtures.live.test.ts README.md
 git commit -m "test: cover bilingual mission evaluation"
 ```
 
 ## Final verification
 
-- [ ] Run `npm run test:run`; expect all offline tests pass.
+- [ ] Run `npm test`; expect all offline tests pass.
 - [ ] Run `npm run typecheck`; expect no TypeScript errors.
 - [ ] Run `npm run build`; expect production build succeeds.
 - [ ] Run `git status --short`; expect only intentional user changes, ideally empty.

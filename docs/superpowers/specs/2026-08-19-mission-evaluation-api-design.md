@@ -6,7 +6,7 @@
 
 ## Relationship to existing design
 
-This specification supersedes the evaluation-API, mission-count, and localization portions of the original AI City Mayor design. ADR-0001 still governs semantic extraction plus deterministic rules, and ADR-0003 still governs server-side OpenAI credentials. UI, realtime-session setup, speech transport, and asset implementation remain outside this specification.
+This specification supersedes the evaluation-API, mission-count, and localization portions of the original AI City Mayor design. ADR-0001 still governs semantic extraction plus deterministic rules, and ADR-0003 still governs server-side OpenAI credentials. Implementation evolves existing `POST /api/evaluate`, domain contracts, OpenAI gateway, request-size guard, and Cloudflare paid-route guard in place; it does not create a parallel application tree. Existing Town Hall/game contracts remain available until UI migration. UI, realtime-session setup, speech transport, and asset implementation remain outside this specification.
 
 ## Purpose
 
@@ -36,7 +36,7 @@ Provide one stateless server API that evaluates typed or transcribed Prompt Atte
 Use a single Next.js route:
 
 ```text
-POST /api/missions/evaluate
+POST /api/evaluate
   -> validate request
   -> resolve mission and language configuration
   -> moderate Prompt Attempt
@@ -102,7 +102,7 @@ Valid mission-step combinations:
 | `unexpected_event` | `response_plan` |
 | `city_school` | `creative_design`, `critical_instructions` |
 
-`temperatureChoice` is required for both `city_school` steps and forbidden for other missions. `prompt` is trimmed, must contain 1–600 Unicode characters, and is treated as untrusted data. `attempt` is a positive integer. `safetyIdentifier` is a random UUID v4 installation ID, not an account ID or PII.
+`temperatureChoice` is required for both `city_school` steps and forbidden for other missions. `prompt` is trimmed, must contain 1–600 Unicode characters, and is treated as untrusted data. `attempt` is a positive integer. `safetyIdentifier` is a random privacy-preserving installation ID matching existing `/^[A-Za-z0-9_-]{16,128}$/`, not an account ID or PII.
 
 ### Internal model extraction
 
@@ -359,29 +359,31 @@ Fallback runs only after successful moderation. It selects exactly one Portugues
 - Do not persist raw prompts, transcripts, moderation results, generated temperature text, or model responses.
 - Exclude raw prompt content from application and error logs.
 - Use `store: false` for Responses API calls.
-- Send a stable random UUID v4 installation identifier as `safety_identifier`; reject any other format.
+- Send a stable random installation identifier matching `/^[A-Za-z0-9_-]{16,128}$/` as `safety_identifier`; reject any other format.
 - Limit input and all model-generated strings.
-- Apply best-effort per-instance throttling by safety identifier; use project-level OpenAI limits as the deployment backstop. Distributed rate limiting requires external state and remains out of scope.
+- Preserve existing Cloudflare Worker paid-route guard: 10 `POST /api/evaluate` requests per client IP per 60 seconds, with project-level OpenAI limits as deployment backstop. Local and non-Cloudflare requests continue to bypass this edge-only guard.
 - Treat prompt injection text as player content. It cannot modify developer instructions, schemas, mission registry, or local rules.
 - Never move the API key into the browser when deployment cannot protect server secrets.
 
 ## File boundaries
 
 ```text
-src/app/api/missions/evaluate/route.ts
-src/server/contracts/mission-evaluation.ts
-src/server/missions/mission-registry.ts
-src/server/missions/evaluate-mission.ts
-src/server/missions/feedback/english.ts
-src/server/missions/feedback/portuguese.ts
-src/server/missions/fallback/english.ts
-src/server/missions/fallback/portuguese.ts
-src/server/openai/moderation.ts
-src/server/openai/prompt-extractor.ts
-src/server/openai/temperature-trial.ts
+app/api/evaluate/route.ts
+src/domain/mission-contracts.ts
+src/domain/missions/mission-registry.ts
+src/domain/missions/evaluate-mission.ts
+src/domain/missions/feedback/english.ts
+src/domain/missions/feedback/portuguese.ts
+src/domain/missions/fallback/english.ts
+src/domain/missions/fallback/portuguese.ts
+src/server/evaluation/openai-gateway.ts
+src/server/evaluation/temperature-trial.ts
+src/server/evaluation/evaluate-prompt.ts
+src/server/guardrails/paid-route-rate-limit.ts
+src/evals/mission-prompt-fixtures.ts
 ```
 
-The route owns HTTP only. OpenAI adapters own network translation only. Mission evaluator and registry remain framework-independent and pure. Feedback/fallback catalogs may import shared criterion/effect types but never OpenAI SDK or Next.js modules.
+The existing route owns HTTP only and retains `readJsonWithLimit` plus `Cache-Control: no-store`. OpenAI gateway owns network translation only. Mission evaluator and registry remain framework-independent and pure. Feedback/fallback catalogs may import shared criterion/effect types but never OpenAI SDK or Next.js modules.
 
 ## Testing
 
