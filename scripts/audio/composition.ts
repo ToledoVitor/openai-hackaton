@@ -137,6 +137,28 @@ function mixBell(pcm: StereoPcm, bar: number): void {
   });
 }
 
+function mixLoopSynchronousBed(pcm: StereoPcm): void {
+  // Both tones complete whole cycles across the 40 ms crossfade and the 48-second loop.
+  mixTone(pcm, {
+    start: 0,
+    duration: MUSIC_SECONDS,
+    frequency: 100,
+    gain: 0.0035,
+    pan: -0.12,
+    attack: 0,
+    release: 0,
+  });
+  mixTone(pcm, {
+    start: 0,
+    duration: MUSIC_SECONDS,
+    frequency: 150,
+    gain: 0.0025,
+    pan: 0.12,
+    attack: 0,
+    release: 0,
+  });
+}
+
 function applyEqualPowerEdgeCrossfade(pcm: StereoPcm): void {
   const crossfadeFrames = Math.round(EDGE_SECONDS * pcm.sampleRate);
   const tailStart = pcm.left.length - crossfadeFrames;
@@ -152,6 +174,8 @@ function applyEqualPowerEdgeCrossfade(pcm: StereoPcm): void {
 export function renderCozyCityLoop(seed = GENERATION_SEED): StereoPcm {
   const pcm = createPcm(MUSIC_SECONDS);
   const random = createRandom(seed);
+
+  mixLoopSynchronousBed(pcm);
 
   for (let bar = 0; bar < MUSIC_BARS; bar += 1) {
     mixElectricPiano(pcm, bar);
