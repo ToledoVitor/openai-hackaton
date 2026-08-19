@@ -80,12 +80,19 @@ function isPersistedQuestState(value: unknown): value is PersistedQuestState {
   const passedNeeds = value.passedNeeds;
   const allNeedsDiscovered = discoveredNeeds.length === NEED_KEYS.length;
   const allNeedsPassed = passedNeeds.length === NEED_KEYS.length;
+  const hasSubmittedAttempt = value.attemptCount > 0;
+
+  // These are reducer reachability invariants: only a settled attempt can
+  // change progress or source, and every raised help tier reveals the Blueprint.
   return (
     passedNeeds.every((need) => discoveredNeeds.includes(need)) &&
     (passedNeeds.length === 0 || allNeedsDiscovered) &&
     value.completed === allNeedsPassed &&
-    (!value.promptBlueprintVisible || value.attemptCount > 0) &&
-    value.helpTier <= value.attemptCount
+    (passedNeeds.length === 0 || hasSubmittedAttempt) &&
+    (!value.completed || hasSubmittedAttempt) &&
+    value.promptBlueprintVisible === (value.helpTier > 0) &&
+    value.helpTier <= value.attemptCount &&
+    (value.source === "live" || hasSubmittedAttempt)
   );
 }
 
