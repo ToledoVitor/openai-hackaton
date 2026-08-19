@@ -254,6 +254,17 @@ describe("persistQuestState", () => {
       source: "fallback",
       completed: false,
     })],
+    ["attempt before all citizen needs are discovered", JSON.stringify({
+      version: 1,
+      discoveredNeeds: [],
+      passedNeeds: [],
+      attemptCount: 1,
+      helpTier: 0,
+      promptBlueprintVisible: false,
+      voiceEnabled: false,
+      source: "live",
+      completed: false,
+    })],
   ])("returns safe defaults for %s", (_name, payload) => {
     // This catches malformed browser data corrupting the quest on load.
     const storage = new MemoryStorage();
