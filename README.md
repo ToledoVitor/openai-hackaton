@@ -28,4 +28,24 @@ Player arrives as new Mayor of a whimsical modern City. Previous mayor's vague o
 
 ## Current status
 
-Design proposal complete. Implementation has not started.
+Backend core is implemented and tested. The frontend and 3D experience have not started; live OpenAI calls and public deployment still require configured credentials and environment verification.
+
+## Backend setup
+
+Install dependencies, then validate the production build locally:
+
+```bash
+npm install
+npm test
+npm run typecheck
+npm run lint
+npm run build
+```
+
+Copy `.env.example` to `.env` and set `OPENAI_API_KEY` there. This project key must stay server-side: never place it in client code, browser requests, or committed environment files.
+
+The backend exposes three Node.js `POST` routes:
+
+- `/api/evaluate` evaluates a Prompt Attempt and returns validated Quest Feedback.
+- `/api/realtime-token` creates a short-lived transcription client secret.
+- `/api/speech` returns approved generated MP3 voice hints for a known hint key.
