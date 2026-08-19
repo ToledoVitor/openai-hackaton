@@ -1,8 +1,14 @@
 .superpowers/
 .worktrees/
 .next/
+.vinext/
 node_modules/
-dist/
+.npm-cache/
+*.tsbuildinfo
+/dist/
+.wrangler/
+/outputs/
+/work/
 coverage/
 playwright-report/
 test-results/
@@ -13,3 +19,4 @@ test-results/
 
 .DS_Store
 *.log
+*.tsbuildinfo

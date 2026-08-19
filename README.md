@@ -1,32 +1,40 @@
-# AI City Mayor
+# AI City
 
-Hackathon proposal for a short, playful 3D game that teaches prompt design through visible civic repairs.
+Jogo de gestão urbana em uma cidade low-poly interativa que reúne o frontend Three.js e o backend OpenAI no mesmo aplicativo Next.js.
 
-Player arrives as new Mayor of a whimsical modern City. Previous mayor's vague orders produced comic Prompt Mishaps. Player interviews citizens, writes or speaks better instructions, watches Construction Sprites repair Town Hall, and learns a reusable Prompt Blueprint: **Goal, Context, Constraints, Output**.
+A entrada apresenta a cidade, pede o nome do jogador e inicia quatro missões sobre escola, mobilidade, infraestrutura e educação.
 
-## Prototype target
+## Executar
 
-- Four-hour hard implementation cap
-- Three-minute guided judge demo; five-to-eight-minute normal play
-- One complete Town Hall Prompt Quest
-- Procedural Soft Toy City rendered with Three.js
-- Typed prompts plus Realtime voice transcription
-- Structured OpenAI evaluation with deterministic local quest rules
-- Generated voice hints
-- Public Codex Sites deployment
-- Adult-only public hackathon prototype; support for minors requires a future safety and compliance phase
+```bash
+npm install
+npm run dev
+```
 
-## Documentation
+Abra `http://localhost:3000`.
 
-- [Proposal](docs/PROPOSAL.md) — pitch, scope, experience, success criteria
-- [Product and system flows](docs/FLOWS.md) — player journey, turn sequence, state machine, fallback paths
-- [Architecture](docs/ARCHITECTURE.md) — components, APIs, data contracts, safety boundaries
-- [Four-hour workflow](docs/HACKATHON-WORKFLOW.md) — Codex orchestration, timing, gates, kill order
-- [Buildable design specification](docs/superpowers/specs/2026-08-19-ai-city-mayor-game-design.md)
-- [Cozy City audio design](docs/superpowers/specs/2026-08-19-cozy-city-audio-design.md)
-- [Domain language](CONTEXT.md)
-- [Architectural decisions](docs/adr/README.md)
+## Backend
 
-## Current status
+Configure `OPENAI_API_KEY` em `.env` a partir de `.env.example`; a chave deve permanecer somente no servidor.
 
-Design proposal complete. Implementation has not started.
+O backend preservado nesta integração expõe:
+
+- `POST /api/evaluate` para avaliar uma tentativa de prompt.
+- `POST /api/realtime-token` para criar uma credencial temporária de transcrição.
+- `POST /api/speech` para gerar áudio de uma dica aprovada.
+
+A interface 3D e as rotas de API compartilham a mesma aplicação, enquanto a conexão das missões visuais ao fluxo livre de prompts continua como próxima etapa.
+
+## Assets
+
+Consulte [ATTRIBUTIONS.md](ATTRIBUTIONS.md) para créditos e licenças CC0.
+
+## Áudio
+
+Trilha urbana e efeitos usam arquivos CC0 existentes. Fontes, autores, licenças e checksums ficam em [`public/audio/SOURCES.md`](public/audio/SOURCES.md).
+
+O áudio inicia após primeira interação do jogador. Controle no topo permite silenciar ou reativar. Para ouvir isoladamente:
+
+```bash
+npm run audio:preview
+```
