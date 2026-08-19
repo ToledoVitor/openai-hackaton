@@ -285,9 +285,9 @@ button { font: inherit; }
 
 .entrada-cartao h1 { margin: 10px 0 7px; font-size: clamp(27px, 3vw, 38px); line-height: 1.03; letter-spacing: -1.3px; }
 .entrada-cartao p { margin: 0 0 22px; color: #628084; font-size: 13px; line-height: 1.5; }
-.entrada-cartao label { display: block; margin-bottom: 7px; font-size: 11px; font-weight: 850; }
+.entrada-cartao > label { display: block; margin-bottom: 7px; font-size: 11px; font-weight: 850; }
 
-.entrada-cartao input {
+.entrada-cartao input[type="text"] {
   width: 100%;
   height: 54px;
   padding: 0 16px;
@@ -301,8 +301,16 @@ button { font: inherit; }
   transition: border-color .18s ease, box-shadow .18s ease;
 }
 
-.entrada-cartao input:focus { border-color: #21a292; box-shadow: 0 0 0 5px rgba(33, 162, 146, .13); }
-.entrada-cartao input::placeholder { color: #9aafad; }
+.entrada-cartao input[type="text"]:focus { border-color: #21a292; box-shadow: 0 0 0 5px rgba(33, 162, 146, .13); }
+.entrada-cartao input[type="text"]::placeholder { color: #9aafad; }
+.entrada-idioma { min-width: 0; margin: 15px 0 0; padding: 0; border: 0; }
+.entrada-idioma legend { margin-bottom: 7px; padding: 0; font-size: 11px; font-weight: 850; }
+.entrada-idioma-opcoes { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border: 2px solid #d6e8e3; border-radius: 15px; background: #edf5f2; }
+.entrada-idioma-opcoes label { position: relative; margin: 0; cursor: pointer; }
+.entrada-idioma-opcoes input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.entrada-idioma-opcoes span { display: grid; min-height: 42px; place-items: center; border-radius: 10px; color: #607e81; font-size: 12px; font-weight: 850; transition: color .18s ease, background .18s ease, box-shadow .18s ease; }
+.entrada-idioma-opcoes input:checked + span { color: #fff; background: linear-gradient(135deg, #1ba393, #0f756e); box-shadow: 0 6px 15px rgba(15, 117, 110, .22); }
+.entrada-idioma-opcoes input:focus-visible + span { outline: 3px solid rgba(33, 162, 146, .28); outline-offset: 2px; }
 .entrada-erro { display: block; min-height: 24px; padding-top: 5px; color: #bf4b34; font-size: 11px; font-weight: 700; }
 
 .entrada-cartao button[type="submit"] {
