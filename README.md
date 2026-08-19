@@ -25,6 +25,11 @@ O backend preservado nesta integração expõe:
 
 A interface 3D e as rotas de API compartilham a mesma aplicação, enquanto a conexão das missões visuais ao fluxo livre de prompts continua como próxima etapa.
 
+## Documentação
+
+- [Design da API bilíngue para quatro missões](docs/superpowers/specs/2026-08-19-mission-evaluation-api-design.md)
+- [Catálogo de efeitos para geração de assets](docs/ASSET-EFFECT-CATALOG.md)
+
 ## Assets
 
 Consulte [ATTRIBUTIONS.md](ATTRIBUTIONS.md) para créditos e licenças CC0.
