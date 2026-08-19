@@ -1,6 +1,6 @@
 # Mission Asset Effect Catalog
 
-**Status:** Proposed API-to-asset contract; pending written-spec review
+**Status:** Approved API-to-asset contract
 
 **Date:** 2026-08-19
 

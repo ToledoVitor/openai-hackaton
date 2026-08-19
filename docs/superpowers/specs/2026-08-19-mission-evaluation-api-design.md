@@ -1,6 +1,6 @@
 # Mission Evaluation API — Design Specification
 
-**Status:** Proposed for implementation; pending written-spec review
+**Status:** Approved for implementation
 
 **Date:** 2026-08-19
 
