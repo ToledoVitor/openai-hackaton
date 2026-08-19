@@ -74,6 +74,28 @@ describe("createRealtimeClientSecret", () => {
     expect(result).not.toHaveProperty("session");
   });
 
+  it("passes an eight-second abort signal to fetch and sanitizes an abort failure", async () => {
+    const timeoutCalls: number[] = [];
+    const timeoutError = new Error("upstream secret detail");
+    const signal = AbortSignal.abort(timeoutError);
+
+    const result = createRealtimeClientSecret({
+      apiKey: projectKey,
+      createTimeoutSignal: (timeoutMs) => {
+        timeoutCalls.push(timeoutMs);
+        return signal;
+      },
+      fetchImpl: (async (_url, options) => {
+        expect(options?.signal).toBe(signal);
+        throw timeoutError;
+      }) as typeof fetch,
+    });
+
+    await expect(result).rejects.toBeInstanceOf(RealtimeCredentialError);
+    await expect(result).rejects.not.toThrow("upstream secret detail");
+    expect(timeoutCalls).toEqual([8_000]);
+  });
+
   it.each([
     ["a non-success response", new Response('{"error":{"message":"upstream secret detail"}}', { status: 401 })],
     ["malformed JSON", new Response("{not-json")],

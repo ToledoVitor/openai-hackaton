@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { HintKey } from "../../../src/domain/contracts";
-import { createSpeechPost, POST } from "./route";
+import { createOpenAISpeechGateway, createSpeechPost, POST } from "./route";
 
 const projectKey = "sk-project-secret";
 const audio = Uint8Array.from([73, 68, 51, 4]).buffer;
@@ -15,6 +15,44 @@ function request(body: string): Request {
 }
 
 describe("createSpeechPost", () => {
+  it("constructs a fifteen-second OpenAI client and preserves the exact speech request", async () => {
+    const constructionOptions: unknown[] = [];
+    const speechRequests: unknown[] = [];
+    const gateway = createOpenAISpeechGateway(projectKey, (options) => {
+      constructionOptions.push(options);
+
+      return {
+        audio: {
+          speech: {
+            create: async (request) => {
+              speechRequests.push(request);
+              return { arrayBuffer: async () => audio };
+            },
+          },
+        },
+      };
+    });
+
+    await expect(
+      gateway.create({
+        model: "gpt-4o-mini-tts",
+        voice: "coral",
+        input: "State a clear goal.",
+        responseFormat: "mp3",
+      }),
+    ).resolves.toBe(audio);
+
+    expect(constructionOptions).toEqual([{ apiKey: projectKey, timeout: 15_000 }]);
+    expect(speechRequests).toEqual([
+      {
+        model: "gpt-4o-mini-tts",
+        voice: "coral",
+        input: "State a clear goal.",
+        response_format: "mp3",
+      },
+    ]);
+  });
+
   it("returns approved mp3 hint audio without caching or exposing the project key", async () => {
     const calls: HintKey[] = [];
     const post = createSpeechPost({
