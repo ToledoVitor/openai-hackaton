@@ -1,10 +1,14 @@
 .superpowers/
 .worktrees/
 .next/
+.vinext/
 node_modules/
 .npm-cache/
 *.tsbuildinfo
-dist/
+/dist/
+.wrangler/
+/outputs/
+/work/
 coverage/
 playwright-report/
 test-results/
