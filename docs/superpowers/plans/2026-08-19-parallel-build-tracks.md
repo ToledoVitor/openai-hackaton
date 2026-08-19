@@ -102,3 +102,33 @@ Implement `withTimeout(operation, timeoutMs)` using injected or internal `AbortC
 Tests must use injected clock/timer seams where needed, avoid real sleeps, cover boundary sizes and Unicode byte length, limiter reset/eviction/isolation, timeout abort/cleanup/late rejection, typed errors, and redaction.
 
 Run focused tests, full tests, typecheck, lint, and diff check. Commit as `feat: add public API guardrails`.
+
+---
+
+### Task 4: Codex Sites Runtime Compatibility
+
+**Owned files:**
+
+- Modify: `package.json`
+- Modify: `package-lock.json`
+- Modify: `.gitignore`
+- Create: `.openai/hosting.json`
+- Create: `vite.config.ts`
+- Create: `worker/index.ts`
+- Modify only when required for compatibility: `next-env.d.ts`, `next.config.ts`, `tsconfig.json`, `vitest.config.ts`
+
+Adapt committed Next App Router scaffold to supported Codex Sites capability path without changing application/domain/API source behavior. Use bundled Sites vinext starter versions and patterns from `/Users/vitortoledo/.codex/plugins/cache/openai-bundled/sites/0.1.37/skills/sites-building/templates/vinext-starter` as compatibility authority.
+
+Required behavior:
+
+- use `vinext` for `dev`, `build`, and `start`;
+- include `@openai/sites-vite-plugin`, `@cloudflare/vite-plugin`, Vite, Wrangler, and required RSC dependencies at bundled compatible versions;
+- configure `sites()`, `vinext()`, and Cloudflare plugin for Worker-compatible ESM with `nodejs_compat`;
+- provide Worker entry delegating App Router requests and secure image optimization handling;
+- create unprovisioned `.openai/hosting.json` with no invented project ID and no D1/R2 bindings;
+- pin Node engine to Sites-supported baseline;
+- preserve Vitest test discovery and existing lint/typecheck behavior;
+- ignore Wrangler/local deployment artifacts;
+- never add secrets or deploy/publish from this task.
+
+Verify existing 30-test baseline, typecheck, lint, standard Sites/vinext production build, and diff check. Inspect build output for successful API route compilation. Record any incompatibility with `export const runtime = "nodejs"`, OpenAI SDK, Next 16.3.1, or TypeScript 7 as concern instead of hiding it. Commit as `build: add Sites-compatible runtime`.
