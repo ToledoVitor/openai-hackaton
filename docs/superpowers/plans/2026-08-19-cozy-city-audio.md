@@ -1,5 +1,7 @@
 # Cozy City Audio Implementation Plan
 
+> **Superseded on 2026-08-19:** User chose existing CC0 music and sound effects. Custom synthesis/generation tasks below are canceled. Current implementation and provenance live in `src/audio` and `public/audio/SOURCES.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build one original 48-second cozy urban music loop, five synthesized ambience assets, and a tested browser playback system with sparse scheduling, controls, persistence, and voice ducking.

@@ -1,0 +1,16 @@
+{
+  "license": "CC0-1.0",
+  "music": {
+    "id": "cozy-city-loop",
+    "path": "/audio/music/cozy-city-loop.ogg",
+    "durationSeconds": 118.469501,
+    "sha256": "2f17ff72e0c7320df6b5141840977adf22206729400a60243cb0095e729e3930"
+  },
+  "ambience": [
+    { "id": "bicycle-bell", "path": "/audio/sfx/bicycle-bell.ogg", "durationSeconds": 1.344966, "sha256": "9e1944db5543e17cb401e4d30accf08491e42de76542a0e48c5ab0e975020495" },
+    { "id": "birds", "path": "/audio/sfx/birds.ogg", "durationSeconds": 30.68825, "sha256": "359e4e3f9da9d75aac64cede511c7e3ef8b461f9d9f8c230f8f80e44c4b3e35f" },
+    { "id": "crosswalk-beep", "path": "/audio/sfx/crosswalk-beep.wav", "durationSeconds": 0.56976, "sha256": "d6929d38afb4a24795c94b7f9aec6aaca5cedf8b9b28f7b717d41b449e310c82" },
+    { "id": "distant-traffic", "path": "/audio/sfx/distant-traffic.ogg", "durationSeconds": 59.591882, "sha256": "1c7ce49677ade7ebc4c7f3bd58657a730b892713382d197ea96a2c0f4ead0c51" },
+    { "id": "footsteps", "path": "/audio/sfx/footsteps.ogg", "durationSeconds": 0.153917, "sha256": "33c9bef5e8aeb1069455699a34a0c5e1ef1787fd3f61594b0859d7e6bb9f9dec" }
+  ]
+}

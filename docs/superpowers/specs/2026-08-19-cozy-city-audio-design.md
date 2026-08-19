@@ -1,10 +1,12 @@
 # AI City Mayor — Cozy City Audio Design
 
-**Status:** Approved design; pending implementation plan
+**Status:** Superseded on 2026-08-19 by existing-asset implementation
 
 **Date:** 2026-08-19
 
-**Constraint:** Original, reproducible, open-source code and CC0 audio only
+**Constraint:** Existing CC0 audio only; no custom synthesis or generated composition
+
+> Scope change: bundled runtime audio now uses existing CC0 assets documented in `public/audio/SOURCES.md`. Synthesis and 48-second composition sections below remain historical context only and are not implementation requirements.
 
 ## Purpose
 

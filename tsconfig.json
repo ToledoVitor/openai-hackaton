@@ -10,5 +10,5 @@
     "skipLibCheck": true,
     "types": ["node", "vitest/globals"]
   },
-  "include": ["scripts/**/*.ts", "src/**/*.ts", "src/**/*.tsx", "audio-preview/**/*.tsx", "vitest.config.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "audio-preview/**/*.ts", "audio-preview/**/*.tsx", "vitest.config.ts"]
 }
