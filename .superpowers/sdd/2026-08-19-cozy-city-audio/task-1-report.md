@@ -35,4 +35,10 @@ Compared every requested configuration value and script against the task brief. 
 
 ## Concerns
 
-Vitest emits a deprecation warning for the brief-required `environmentMatchGlobs` option. It remains unchanged to preserve the exact requested configuration and should be migrated to `test.projects` only when the project updates its test configuration deliberately.
+Resolved: replaced the deprecated `environmentMatchGlobs` configuration with the Node default. Future React tests must declare `// @vitest-environment jsdom` file-locally.
+
+## Follow-up verification
+
+Command: `npm test -- src/audio/__tests__/toolchain.test.ts && npm run typecheck && npm test`
+
+Output summary: all three commands exited 0; the focused Vitest run reported 1 passing test, TypeScript reported no errors, the full Vitest run reported 1 passing test, and no deprecation warning was emitted.
