@@ -28,7 +28,7 @@ Player arrives as new Mayor of a whimsical modern City. Previous mayor's vague o
 
 ## Current status
 
-Design proposal complete. Implementation has not started.
+Backend core is implemented and tested. The frontend and 3D experience have not started; live OpenAI calls and public deployment still require configured credentials and environment verification.
 
 ## Backend setup
 
