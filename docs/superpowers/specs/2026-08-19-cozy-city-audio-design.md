@@ -73,7 +73,7 @@ Ambience plays 8–14 dB below music. Effects must remain recognizable at laptop
 
 ## Asset Generation Pipeline
 
-`scripts/audio/generate-audio.ts` owns deterministic synthesis and PCM rendering. A fixed checked-in seed produces identical masters. FFmpeg converts WAV masters to Ogg Vorbis runtime files; no FFmpeg library or binary ships to browser.
+`scripts/audio/generate-audio.ts` owns deterministic synthesis and PCM rendering. A fixed checked-in seed produces identical masters. MIT-licensed `@audio/encode-ogg@1.2.2` converts PCM masters to Ogg Vorbis during generation; encoder code remains a development dependency and does not ship to browser.
 
 Expected outputs:
 
