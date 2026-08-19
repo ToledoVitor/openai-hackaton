@@ -19,6 +19,7 @@
     "openai": "7.5.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "three": "^0.180.0",
     "zod": "4.4.3"
   },
   "devDependencies": {
@@ -27,6 +28,7 @@
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
+    "@types/three": "^0.180.0",
     "@vitejs/plugin-react": "6.0.5",
     "@vitejs/plugin-rsc": "0.5.34",
     "eslint": "latest",
