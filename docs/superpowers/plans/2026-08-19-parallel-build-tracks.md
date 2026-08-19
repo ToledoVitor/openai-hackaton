@@ -132,3 +132,34 @@ Required behavior:
 - never add secrets or deploy/publish from this task.
 
 Verify existing 30-test baseline, typecheck, lint, standard Sites/vinext production build, and diff check. Inspect build output for successful API route compilation. Record any incompatibility with `export const runtime = "nodejs"`, OpenAI SDK, Next 16.3.1, or TypeScript 7 as concern instead of hiding it. Commit as `build: add Sites-compatible runtime`.
+
+---
+
+### Task 5: Paid API Route Hardening
+
+**Owned files:**
+
+- Modify: `app/api/evaluate/route.ts`
+- Modify: `app/api/evaluate/route.test.ts`
+- Modify: `app/api/realtime-token/route.ts`
+- Modify: `app/api/realtime-token/route.test.ts`
+- Modify: `app/api/speech/route.ts`
+- Modify: `app/api/speech/route.test.ts`
+- Modify: `src/server/evaluation/openai-gateway.ts`
+- Modify: `src/server/evaluation/openai-gateway.test.ts`
+- Modify when needed: `src/server/guardrails/**`
+
+Close backend review blockers before public deployment. Compose existing guardrail primitives into all paid public routes without logging caller keys or request content.
+
+Required behavior:
+
+- configure evaluation and speech OpenAI clients with `maxRetries: 0`, making existing 8-second and 15-second timeouts total single-attempt deadlines;
+- apply bounded request-body parsing to JSON routes before schema validation;
+- apply route-specific rate limits with stable `429` JSON responses and `Retry-After` headers;
+- derive limiter keys only from trusted server request metadata, not caller-controlled `safetyIdentifier` values;
+- reject invalid/oversized bodies with stable, redacted `4xx` responses;
+- preserve existing domain fallback and upstream error behavior;
+- document process-local limiter limits and make Cloudflare/edge rate limiting plus OpenAI project hard spend caps explicit production release gates;
+- never add secrets, content logging, deploy, or publish.
+
+Tests must prove client construction disables retries, body limits cover declared and streamed sizes, each route returns redacted `429` responses at configured boundaries, independent routes/keys do not share counters accidentally, and existing route behavior remains intact. Run focused tests, full tests, typecheck, lint, production build, and diff check. Commit as `fix: harden paid API routes`.
