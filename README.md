@@ -6,6 +6,7 @@ A entrada apresenta a cidade, pede o nome do jogador e inicia quatro missões so
 
 ## Acesso público
 
+Temos uma versão pública onde você pode testar a ideia. Ela foi feita usando a feature de sites do Codex
 [Jogar AI City](https://cidade-viva-hackathon.pr-vitortoledo.chatgpt.site)
 
 ## Executar
