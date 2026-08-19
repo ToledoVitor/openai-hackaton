@@ -6,6 +6,7 @@ import {
 } from "../../../src/domain/contracts";
 import {
   evaluateMissionRequestSchema,
+  MISSION_STEPS,
   type EvaluateMissionRequest,
   type EvaluateMissionResponse,
   type EvaluationErrorCode,
@@ -72,11 +73,12 @@ function invalidMissionRequest(body: unknown): EvaluationErrorResponse {
     return missionError("temperature_not_allowed", "temperatureChoice");
   }
   const validMissionStep =
-    (value.missionId === "new_school" && value.stepId === "design") ||
-    (value.missionId === "safe_path" && value.stepId === "design") ||
-    (value.missionId === "unexpected_event" && value.stepId === "response_plan") ||
-    (value.missionId === "city_school" &&
-      (value.stepId === "creative_design" || value.stepId === "critical_instructions"));
+    typeof value.missionId === "string" &&
+    value.missionId in MISSION_STEPS &&
+    typeof value.stepId === "string" &&
+    MISSION_STEPS[value.missionId as keyof typeof MISSION_STEPS].includes(
+      value.stepId as never,
+    );
   if (!validMissionStep && typeof value.missionId === "string" && typeof value.stepId === "string") {
     return missionError("invalid_mission_step", "stepId");
   }

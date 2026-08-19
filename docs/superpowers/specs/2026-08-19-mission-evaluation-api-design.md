@@ -100,6 +100,7 @@ type EvaluateMissionRequest = {
   prompt: string;
   attempt: number;
   satisfiedCriteria: string[];
+  selectedChoice?: string;
   safetyIdentifier: string;
   temperatureChoice?: "low" | "medium" | "high";
 };
@@ -115,6 +116,8 @@ Valid mission-step combinations:
 | `city_school` | `creative_design`, `critical_instructions` |
 
 `temperatureChoice` is required for both `city_school` steps and forbidden for other missions. `prompt` is trimmed, must contain 1–600 Unicode characters, and is treated as untrusted data. `attempt` is a positive integer. `safetyIdentifier` is a random privacy-preserving installation ID matching existing `/^[A-Za-z0-9_-]{16,128}$/`, not an account ID or PII.
+
+`selectedChoice` carries the last `choice` returned by the API so a progressive attempt can retain its branch without requiring the player to repeat it. When present, it must be one of the selected mission's two path IDs. A newly extracted explicit choice replaces it.
 
 ### Internal model extraction
 
@@ -228,6 +231,7 @@ type CreateRealtimeSessionRequest = {
   language: Language;
   attempt: number;
   satisfiedCriteria: string[];
+  selectedChoice?: string;
   safetyIdentifier: string;
 };
 ```

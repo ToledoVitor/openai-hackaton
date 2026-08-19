@@ -14,6 +14,7 @@ Server reads `OPENAI_API_KEY` only from environment. Optional `OPENAI_REALTIME_M
   "prompt": "Construa uma escola compacta no centro para 300 alunos, com entrada acessível.",
   "attempt": 2,
   "satisfiedCriteria": ["school_goal_clear"],
+  "selectedChoice": "compact_center",
   "safetyIdentifier": "installation_7Q2mN4xP8vR1"
 }
 ```
@@ -45,7 +46,7 @@ Success body:
 }
 ```
 
-Only `progress` and `effectKeys` are authoritative for game state. API remains stateless; send returned `progress.satisfied` in next attempt.
+Only `progress` and `effectKeys` are authoritative for game state. API remains stateless; send returned `progress.satisfied` and `choice` as next request's `satisfiedCriteria` and `selectedChoice`.
 
 Exact languages: `portuguese`, `english`. Server never auto-detects or switches response language.
 
@@ -60,6 +61,7 @@ Exact languages: `portuguese`, `english`. Server never auto-detects or switches 
   "language": "portuguese",
   "attempt": 2,
   "satisfiedCriteria": ["school_goal_clear"],
+  "selectedChoice": "compact_center",
   "safetyIdentifier": "installation_7Q2mN4xP8vR1"
 }
 ```

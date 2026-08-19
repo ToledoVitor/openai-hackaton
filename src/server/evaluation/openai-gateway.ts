@@ -108,6 +108,7 @@ export class OpenAIEvaluationGateway
             EXTRACTION_SYSTEM_INSTRUCTION,
             definition.instructions[request.language],
             `Current step: ${request.stepId}.`,
+            `Previously selected path: ${request.selectedChoice ?? "none"}.`,
             `Return every criterion key exactly once: ${definition.criteria.join(", ")}.`,
           ].join(" "),
         },

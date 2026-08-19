@@ -22,6 +22,20 @@ export type Language = (typeof LANGUAGES)[number];
 export const TEMPERATURE_CHOICES = ["low", "medium", "high"] as const;
 export type TemperatureChoice = (typeof TEMPERATURE_CHOICES)[number];
 
+export const MISSION_STEPS: Readonly<Record<MissionId, readonly MissionStepId[]>> = {
+  new_school: ["design"],
+  safe_path: ["design"],
+  unexpected_event: ["response_plan"],
+  city_school: ["creative_design", "critical_instructions"],
+};
+
+export const MISSION_PATHS: Readonly<Record<MissionId, readonly string[]>> = {
+  new_school: ["compact_center", "yard_neighborhood"],
+  safe_path: ["smart_signals", "calm_green_street"],
+  unexpected_event: ["water_first", "garbage_first"],
+  city_school: ["ai_lab", "reading_plaza"],
+};
+
 export const effectKeys = [
   "off_topic_no_change", "unsafe_input_no_change",
   "evaluation_unavailable_no_change", "temperature_trial_unavailable",
@@ -63,19 +77,23 @@ const missionContextSchema = z
     language: languageSchema,
     attempt: z.number().int().positive().max(1_000),
     satisfiedCriteria: satisfiedCriteriaSchema,
+    selectedChoice: z.string().trim().min(1).max(80).optional(),
     safetyIdentifier: safetyIdentifierSchema,
   })
   .strict()
   .superRefine((value, context) => {
-    const validStep =
-      (value.missionId === "new_school" && value.stepId === "design") ||
-      (value.missionId === "safe_path" && value.stepId === "design") ||
-      (value.missionId === "unexpected_event" && value.stepId === "response_plan") ||
-      (value.missionId === "city_school" &&
-        (value.stepId === "creative_design" || value.stepId === "critical_instructions"));
-
-    if (!validStep) {
+    if (!MISSION_STEPS[value.missionId].includes(value.stepId)) {
       context.addIssue({ code: "custom", path: ["stepId"], message: "Invalid mission step." });
+    }
+    if (
+      value.selectedChoice !== undefined &&
+      !MISSION_PATHS[value.missionId].includes(value.selectedChoice)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["selectedChoice"],
+        message: "Selected choice does not belong to this mission.",
+      });
     }
   });
 

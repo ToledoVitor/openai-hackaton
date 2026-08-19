@@ -101,25 +101,34 @@ export async function evaluateMissionPrompt(
     return { ...result, effectKeys: ["unsafe_input_no_change"] };
   }
 
-  let extraction: MissionExtraction;
-  let source: "live" | "fallback" = "live";
-
-  try {
-    extraction = await dependencies.extraction.extractMission(request);
-  } catch {
-    extraction = fallbackMissionExtraction(request);
-    source = "fallback";
-  }
-
-  const temperatureTrial =
+  const extractionPromise = dependencies.extraction
+    .extractMission(request)
+    .then((extraction) => ({ extraction, source: "live" as const }))
+    .catch(() => ({
+      extraction: fallbackMissionExtraction(request),
+      source: "fallback" as const,
+    }));
+  const temperaturePromise =
     request.missionId === "city_school" && dependencies.temperature
-      ? await dependencies.temperature.run(request)
-      : undefined;
-
-  return evaluateMission({
+      ? dependencies.temperature.run(request)
+      : Promise.resolve(undefined);
+  const [{ extraction, source }, temperatureTrial] = await Promise.all([
+    extractionPromise,
+    temperaturePromise,
+  ]);
+  const result = evaluateMission({
     request,
     extraction,
     source,
     ...(temperatureTrial ? { temperatureTrial } : {}),
   });
+  const fallbackMiss =
+    source === "fallback" &&
+    extraction.choice === null &&
+    Object.values(extraction.criteria).every((criterion) => !criterion.met) &&
+    temperatureTrial?.status !== "generated";
+
+  return fallbackMiss
+    ? { ...result, status: "retry", effectKeys: ["evaluation_unavailable_no_change"] }
+    : result;
 }

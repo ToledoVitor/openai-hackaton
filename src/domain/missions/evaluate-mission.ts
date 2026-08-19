@@ -83,6 +83,7 @@ export function evaluateMission(input: {
   const definition = getMissionDefinition(input.request.missionId);
   const allowed = new Set(definition.criteria);
   const previous = new Set(input.request.satisfiedCriteria.filter((criterion) => allowed.has(criterion)));
+  const resolvedChoice = input.extraction.choice ?? input.request.selectedChoice ?? null;
 
   if (input.extraction.offTopic) {
     const satisfied = definition.criteria.filter((criterion) => previous.has(criterion));
@@ -113,6 +114,13 @@ export function evaluateMission(input: {
     if (input.extraction.criteria[criterion]?.met) candidate.add(criterion);
   }
 
+  if (input.request.missionId === "city_school") {
+    candidate.delete("temperature_provided");
+    candidate.delete("creative_temperature_tested");
+    candidate.delete("critical_temperature_tested");
+    candidate.delete("temperature_comparison_complete");
+  }
+
   const branchCriterion =
     input.request.missionId === "new_school"
       ? "school_branch_selected"
@@ -121,7 +129,7 @@ export function evaluateMission(input: {
         : input.request.missionId === "unexpected_event"
           ? "service_priority_selected"
           : "city_school_project_selected";
-  if (input.extraction.choice === null) {
+  if (resolvedChoice === null) {
     candidate.delete(branchCriterion);
     if (input.request.missionId === "new_school") candidate.delete("school_branch_feature_defined");
     if (input.request.missionId === "safe_path") candidate.delete("path_branch_requirements_defined");
@@ -149,6 +157,7 @@ export function evaluateMission(input: {
 
   if (
     input.request.missionId === "city_school" &&
+    input.temperatureTrial?.status === "generated" &&
     previous.has("creative_temperature_tested") &&
     previous.has("critical_temperature_tested") &&
     previous.has("expected_behavior_explained")
@@ -165,7 +174,7 @@ export function evaluateMission(input: {
     missing.length === 0 ? "success" : newlySatisfied.length === 0 ? "retry" : "partial";
   const effectKeys = effectsFor({
     request: input.request,
-    extraction: input.extraction,
+    extraction: { ...input.extraction, choice: resolvedChoice },
     status,
     missing,
     ...(input.temperatureTrial ? { temperatureTrial: input.temperatureTrial } : {}),
@@ -177,7 +186,7 @@ export function evaluateMission(input: {
     language: input.request.language,
     source: input.source,
     status,
-    choice: input.extraction.choice,
+    choice: resolvedChoice,
     progress: {
       satisfied: [...satisfied],
       newlySatisfied,
@@ -188,7 +197,7 @@ export function evaluateMission(input: {
       language: input.request.language,
       missionId: input.request.missionId,
       status,
-      choice: input.extraction.choice,
+      choice: resolvedChoice,
       nextMissingCriterion: missing[0] ?? null,
     }),
     effectKeys,

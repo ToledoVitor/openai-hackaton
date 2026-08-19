@@ -1,4 +1,4 @@
-import type { MissionId } from "../mission-contracts";
+import { MISSION_PATHS, MISSION_STEPS, type MissionId } from "../mission-contracts";
 import type { MissionDefinition } from "./types";
 
 const commonInstructions = {
@@ -11,8 +11,8 @@ const commonInstructions = {
 export const missionDefinitions: Readonly<Record<MissionId, MissionDefinition>> = {
   new_school: {
     id: "new_school",
-    steps: ["design"],
-    paths: ["compact_center", "yard_neighborhood"],
+    steps: MISSION_STEPS.new_school,
+    paths: MISSION_PATHS.new_school,
     criteria: [
       "school_goal_clear",
       "school_branch_selected",
@@ -54,8 +54,8 @@ export const missionDefinitions: Readonly<Record<MissionId, MissionDefinition>> 
   },
   safe_path: {
     id: "safe_path",
-    steps: ["design"],
-    paths: ["smart_signals", "calm_green_street"],
+    steps: MISSION_STEPS.safe_path,
+    paths: MISSION_PATHS.safe_path,
     criteria: [
       "safe_path_goal_clear",
       "child_users_named",
@@ -100,8 +100,8 @@ export const missionDefinitions: Readonly<Record<MissionId, MissionDefinition>> 
   },
   unexpected_event: {
     id: "unexpected_event",
-    steps: ["response_plan"],
-    paths: ["water_first", "garbage_first"],
+    steps: MISSION_STEPS.unexpected_event,
+    paths: MISSION_PATHS.unexpected_event,
     criteria: [
       "both_service_problems_identified",
       "service_priority_selected",
@@ -143,8 +143,8 @@ export const missionDefinitions: Readonly<Record<MissionId, MissionDefinition>> 
   },
   city_school: {
     id: "city_school",
-    steps: ["creative_design", "critical_instructions"],
-    paths: ["ai_lab", "reading_plaza"],
+    steps: MISSION_STEPS.city_school,
+    paths: MISSION_PATHS.city_school,
     criteria: [
       "city_school_project_selected",
       "temperature_provided",

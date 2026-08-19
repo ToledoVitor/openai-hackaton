@@ -55,6 +55,7 @@ export function buildRealtimeInstructions(request: RealtimeSessionRequest): stri
     `Mission: ${request.missionId}. Step: ${request.stepId}. Attempt: ${request.attempt}.`,
     `Teaching concept: ${definition.teachingConcept[request.language]}.`,
     `Allowed project paths: ${definition.paths.join(", ")}.`,
+    `Selected project path: ${request.selectedChoice ?? "none"}.`,
     `Mission criteria in teaching order: ${definition.criteria.join(", ")}.`,
     `Already satisfied criteria: ${progress.length > 0 ? progress.join(", ") : "none"}.`,
   ].join(" ");

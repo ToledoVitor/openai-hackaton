@@ -9,6 +9,7 @@
 ## Delivered
 
 - Stateless bilingual mission contract for `new_school`, `safe_path`, `unexpected_event`, and `city_school`.
+- Progressive branch state carried explicitly as validated `selectedChoice`.
 - Exact `portuguese` or `english` parameter; no language auto-detection.
 - Semantic extraction through OpenAI Structured Outputs with deterministic local progression.
 - Local bilingual feedback and conservative fallback extraction.

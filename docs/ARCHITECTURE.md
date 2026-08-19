@@ -132,6 +132,7 @@ Browser reducer stores:
 - current narrative beat;
 - discovered Citizen Requests;
 - passed Town Hall needs;
+- selected mission path returned by evaluator;
 - attempt count and help tier;
 - voice preference;
 - random anonymous safety identifier;
