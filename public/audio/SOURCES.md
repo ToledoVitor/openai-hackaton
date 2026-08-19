@@ -12,3 +12,5 @@ All bundled files are unmodified source bytes, except filenames were normalized.
 | `sfx/crosswalk-beep.wav` | `beep1.wav` | Spring Spring | [Various Sound Effects](https://opengameart.org/content/various-sound-effects-0) ([download](https://opengameart.org/sites/default/files/beep1.wav)) | CC0 1.0 | `d6929d38afb4a24795c94b7f9aec6aaca5cedf8b9b28f7b717d41b449e310c82` |
 
 `bicycle-bell.ogg` was extracted from the source ZIP. Other files were downloaded directly. Only local filenames changed.
+
+`crosswalk-beep.wav` is a generic CC0 beep reused as a game cue, not an authentic or location-specific pedestrian signal recording.
