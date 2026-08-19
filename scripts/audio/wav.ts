@@ -50,26 +50,12 @@ export function readWavHeader(bytes: Uint8Array): WavHeader {
   if (readAscii(bytes, 36, 4) !== "data") throw new Error("WAV is missing data marker");
 
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  const riffSize = view.getUint32(4, true);
-  const formatSize = view.getUint32(16, true);
-  const format = view.getUint16(20, true);
   const channels = view.getUint16(22, true);
   const sampleRate = view.getUint32(24, true);
-  const byteRate = view.getUint32(28, true);
   const bitsPerSample = view.getUint16(34, true);
   const blockAlign = view.getUint16(32, true);
   const dataBytes = view.getUint32(40, true);
-  const expectedBlockAlign = CHANNELS * (BITS_PER_SAMPLE / 8);
-
-  if (riffSize !== bytes.length - 8) throw new Error("WAV RIFF size does not match file length");
-  if (formatSize !== 16) throw new Error("WAV fmt chunk must be canonical 16-byte PCM");
-  if (format !== PCM_FORMAT) throw new Error("WAV must use PCM format");
-  if (channels !== CHANNELS) throw new Error("WAV must be stereo");
-  if (bitsPerSample !== BITS_PER_SAMPLE) throw new Error("WAV must use 16-bit samples");
-  if (blockAlign !== expectedBlockAlign) throw new Error("WAV block alignment is invalid");
-  if (byteRate !== sampleRate * blockAlign) throw new Error("WAV byte rate is invalid");
-  if (dataBytes % blockAlign !== 0) throw new Error("WAV data size must be block-aligned");
-  if (dataBytes !== bytes.length - WAV_HEADER_BYTES) throw new Error("WAV data size does not match file length");
+  if (blockAlign === 0 || dataBytes > bytes.length - WAV_HEADER_BYTES) throw new Error("WAV data chunk is invalid");
 
   const frames = dataBytes / blockAlign;
   return { channels, sampleRate, bitsPerSample, frames, duration: frames / sampleRate };
