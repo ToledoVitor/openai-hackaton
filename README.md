@@ -23,6 +23,7 @@ Player arrives as new Mayor of a whimsical modern City. Previous mayor's vague o
 - [Architecture](docs/ARCHITECTURE.md) — components, APIs, data contracts, safety boundaries
 - [Four-hour workflow](docs/HACKATHON-WORKFLOW.md) — Codex orchestration, timing, gates, kill order
 - [Buildable design specification](docs/superpowers/specs/2026-08-19-ai-city-mayor-game-design.md)
+- [Cozy City audio design](docs/superpowers/specs/2026-08-19-cozy-city-audio-design.md)
 - [Domain language](CONTEXT.md)
 - [Architectural decisions](docs/adr/README.md)
 
