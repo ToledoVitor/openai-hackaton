@@ -4,7 +4,16 @@ import {
   promptExtractionSchema,
   type TurnResult,
 } from "../../domain/contracts";
+import type {
+  EvaluateMissionRequest,
+  EvaluateMissionResponse,
+  MissionExtraction,
+  TemperatureTrial,
+} from "../../domain/mission-contracts";
 import { selectFallback } from "../../domain/fallback-bank";
+import { evaluateMission } from "../../domain/missions/evaluate-mission";
+import { fallbackMissionExtraction } from "../../domain/missions/fallback";
+import { getMissionDefinition } from "../../domain/missions/mission-registry";
 import { evaluateQuest } from "../../domain/quest-engine";
 
 export interface ModerationGateway {
@@ -13,6 +22,14 @@ export interface ModerationGateway {
 
 export interface ExtractionGateway {
   extract(prompt: string, safetyIdentifier: string): Promise<unknown>;
+}
+
+export interface MissionExtractionGateway {
+  extractMission(request: EvaluateMissionRequest): Promise<MissionExtraction>;
+}
+
+export interface TemperatureTrialGateway {
+  run(request: EvaluateMissionRequest): Promise<TemperatureTrial>;
 }
 
 const FLAGGED_EXTRACTION: PromptExtraction = {
@@ -53,5 +70,56 @@ export async function evaluatePrompt(
     currentPassedNeeds: request.currentPassedNeeds,
     extraction,
     source: "live",
+  });
+}
+
+function emptyMissionExtraction(request: EvaluateMissionRequest): MissionExtraction {
+  const definition = getMissionDefinition(request.missionId);
+  return {
+    offTopic: true,
+    choice: null,
+    criteria: Object.fromEntries(
+      definition.criteria.map((criterion) => [criterion, { met: false, evidence: "" }]),
+    ),
+  };
+}
+
+export async function evaluateMissionPrompt(
+  request: EvaluateMissionRequest,
+  dependencies: {
+    moderation: ModerationGateway;
+    extraction: MissionExtractionGateway;
+    temperature?: TemperatureTrialGateway;
+  },
+): Promise<EvaluateMissionResponse> {
+  if (await dependencies.moderation.isFlagged(request.prompt)) {
+    const result = evaluateMission({
+      request,
+      extraction: emptyMissionExtraction(request),
+      source: "live",
+    });
+    return { ...result, effectKeys: ["unsafe_input_no_change"] };
+  }
+
+  let extraction: MissionExtraction;
+  let source: "live" | "fallback" = "live";
+
+  try {
+    extraction = await dependencies.extraction.extractMission(request);
+  } catch {
+    extraction = fallbackMissionExtraction(request);
+    source = "fallback";
+  }
+
+  const temperatureTrial =
+    request.missionId === "city_school" && dependencies.temperature
+      ? await dependencies.temperature.run(request)
+      : undefined;
+
+  return evaluateMission({
+    request,
+    extraction,
+    source,
+    ...(temperatureTrial ? { temperatureTrial } : {}),
   });
 }

@@ -11,7 +11,7 @@ flowchart LR
         Game[Quest state machine]
         Scene[React Three Fiber diorama]
         Store[localStorage progression]
-        Mic[WebRTC push-to-talk]
+        Mic[WebRTC voice conversation]
         Audio[Hint audio player]
     end
 
@@ -26,7 +26,7 @@ flowchart LR
     subgraph OpenAI
         Mod[omni-moderation-latest]
         Resp[Responses API / GPT-5.6 Luna]
-        RT[Realtime transcription]
+        RT[Realtime speech-to-speech]
         TTS[Speech API]
         Temp[Temperature-compatible model]
     end
@@ -42,6 +42,8 @@ flowchart LR
     Mic --> Token
     Token --> RT
     RT --> UI
+    RT -->|submit_prompt| UI
+    UI --> Evaluate
     UI --> Speak
     Speak --> TTS
     TTS --> Audio
@@ -68,7 +70,7 @@ Validates length and shape, runs moderation, calls Responses API with strict Str
 
 ### Realtime token route
 
-Uses server-side project API key to mint short-lived Realtime client credential. Browser connects over WebRTC. Transcript populates editable prompt field; voice never auto-submits.
+Validates mission, step, explicit language, progress, and privacy-preserving safety identifier. Uses server-side project API key to mint short-lived `type: realtime` client credential. Browser connects over WebRTC for speech-to-speech coaching. Realtime tool `submit_prompt` asks browser to relay candidate text to Evaluation route; voice never owns progression.
 
 ### Speech route
 
@@ -115,8 +117,9 @@ Responses schema requires every property and rejects additional properties. Serv
 | Purpose | Choice | Reason |
 |---|---|---|
 | Prompt extraction | `gpt-5.6-luna`, low reasoning | Fast, low-cost structured turns |
-| Voice input | Realtime transcription over WebRTC | Low-latency push-to-talk in browser |
-| Voice hints | `gpt-4o-mini-tts` | Fast generated speech |
+| Voice conversation | `OPENAI_REALTIME_MODEL` or `gpt-realtime` over WebRTC | Natural low-latency audio and function calling |
+| Input transcription | `gpt-4o-mini-transcribe` inside Realtime session | Bilingual transcript context for tool submission |
+| Standalone voice hints | `gpt-4o-mini-tts` | Fallback generated speech |
 | Harmful-input filter | `omni-moderation-latest` | Current capable free moderation model |
 | Parameter Trial | GPT-5.2 with reasoning disabled, compatibility checked at preflight | Documented temperature support; isolated stretch scope |
 
@@ -147,6 +150,8 @@ Persist progression, preferences, and random anonymous safety identifier only. N
 - Generate a random privacy-preserving installation identifier, store it locally, and send it as stable `safety_identifier` for model requests.
 - No accounts, analytics, cookies beyond deployment essentials, or server persistence.
 - Generated voice disclosure visible beside audio control.
+- Realtime credential request sets `OpenAI-Safety-Identifier` on server; browser receives only ephemeral secret.
+- Realtime prose and tool arguments are non-authoritative. Only `/api/evaluate` result changes city state.
 
 ## Performance
 

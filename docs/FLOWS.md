@@ -61,6 +61,33 @@ sequenceDiagram
     end
 ```
 
+## Realtime Voice sequence
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Player
+    participant UI
+    participant Token as Realtime Token Route
+    participant RT as OpenAI Realtime
+    participant Eval as Evaluation Route
+
+    UI->>Token: missionId, stepId, language, progress, safetyIdentifier
+    Token->>RT: create mission-scoped client secret
+    RT-->>Token: ephemeral credential
+    Token-->>UI: value, expiresAt, model
+    UI->>RT: WebRTC audio connection
+    Player->>RT: Natural voice conversation
+    RT-->>Player: Spoken coaching
+    RT-->>UI: submit_prompt(candidate)
+    UI->>Eval: candidate + current authoritative client state
+    Eval-->>UI: progress, feedback, effectKeys
+    UI->>RT: function-call output
+    RT-->>Player: Explain validated result
+```
+
+Application server stores no Realtime history. UI applies city changes only from Evaluation route, never from voice prose.
+
 ## Quest state machine
 
 ```mermaid
