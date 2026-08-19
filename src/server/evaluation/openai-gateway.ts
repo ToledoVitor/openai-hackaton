@@ -28,6 +28,10 @@ export interface OpenAIEvaluationClient {
   };
 }
 
+type OpenAIEvaluationClientFactory = (
+  options: ConstructorParameters<typeof OpenAI>[0],
+) => OpenAIEvaluationClient;
+
 export class OpenAIEvaluationGateway implements ModerationGateway, ExtractionGateway {
   constructor(private readonly client: OpenAIEvaluationClient) {}
 
@@ -63,6 +67,9 @@ export class OpenAIEvaluationGateway implements ModerationGateway, ExtractionGat
   }
 }
 
-export function createOpenAIEvaluationGateway(apiKey: string): OpenAIEvaluationGateway {
-  return new OpenAIEvaluationGateway(new OpenAI({ apiKey, timeout: 8_000 }));
+export function createOpenAIEvaluationGateway(
+  apiKey: string,
+  createClient: OpenAIEvaluationClientFactory = (options) => new OpenAI(options),
+): OpenAIEvaluationGateway {
+  return new OpenAIEvaluationGateway(createClient({ apiKey, timeout: 8_000, maxRetries: 0 }));
 }

@@ -1,5 +1,11 @@
 const MAX_KEY_LENGTH = 256;
 
+/**
+ * Route handlers cannot verify request-provided identity headers. Use this
+ * server-owned key until trusted middleware supplies authenticated metadata.
+ */
+export const ANONYMOUS_RATE_LIMIT_KEY = "anonymous";
+
 export interface FixedWindowRateLimiterOptions {
   limit: number;
   windowMs: number;
@@ -11,6 +17,20 @@ export type RateLimitDecision =
   | { allowed: true; remaining: number }
   | { allowed: false; remaining: 0; retryAfterMs: number };
 
+export function rateLimitResponse(decision: RateLimitDecision): Response | undefined {
+  if (decision.allowed) {
+    return undefined;
+  }
+
+  return Response.json(
+    { error: "rate_limited" },
+    {
+      status: 429,
+      headers: { "Retry-After": String(Math.ceil(decision.retryAfterMs / 1_000)) },
+    },
+  );
+}
+
 interface WindowEntry {
   count: number;
   startedAt: number;
@@ -18,8 +38,9 @@ interface WindowEntry {
 }
 
 /**
- * Process-local limiting is best-effort only. Provider and project spend caps
- * remain mandatory safeguards for every deployment.
+ * Process-local limiting is best-effort only and cannot coordinate instances.
+ * Cloudflare edge rate limiting and an OpenAI project hard spend cap are
+ * mandatory production release gates.
  */
 export class FixedWindowRateLimiter {
   readonly #limit: number;

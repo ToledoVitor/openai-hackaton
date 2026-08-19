@@ -1,8 +1,18 @@
 import { describe, expect, it } from "vitest";
 
-import { FixedWindowRateLimiter } from "./rate-limiter";
+import { FixedWindowRateLimiter, rateLimitResponse } from "./rate-limiter";
 
 describe("FixedWindowRateLimiter", () => {
+  it("turns a rejected decision into the stable redacted 429 response", async () => {
+    expect(rateLimitResponse({ allowed: true, remaining: 0 })).toBeUndefined();
+
+    const response = rateLimitResponse({ allowed: false, remaining: 0, retryAfterMs: 1_001 });
+
+    expect(response?.status).toBe(429);
+    expect(response?.headers.get("Retry-After")).toBe("2");
+    await expect(response?.json()).resolves.toEqual({ error: "rate_limited" });
+  });
+
   it("allows exactly the configured number of requests and reports the retry delay", () => {
     let now = 1_000;
     const limiter = new FixedWindowRateLimiter({
