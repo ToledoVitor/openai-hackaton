@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { PromptExtraction } from "../domain/contracts";
+import * as questEngine from "../domain/quest-engine";
 import { PROMPT_FIXTURES } from "./prompt-fixtures";
 import { runPromptFixtures } from "./fixture-runner";
 
@@ -113,6 +114,34 @@ describe("runPromptFixtures", () => {
     expect(report.cases[0]).toEqual({ name: "vague", passed: false, diagnosticCode: "semantic_mismatch" });
     expect(report.totals).toEqual({ total: 8, passed: 7, failed: 1 });
     expect(JSON.stringify(report)).not.toContain("Fix Town Hall.");
+  });
+
+  it("evaluates schema-valid semantic mismatches before retaining their diagnostic priority", async () => {
+    const evaluateQuest = vi.spyOn(questEngine, "evaluateQuest");
+
+    const report = await runPromptFixtures({
+      extract: async (prompt) => {
+        const extraction = await compliantExtraction(prompt);
+
+        return prompt === "Fix Town Hall."
+          ? { ...extraction, civicTraits: { accessibleEntrance: true, clearSign: false, weatherCover: false } }
+          : extraction;
+      },
+    });
+
+    expect(evaluateQuest).toHaveBeenCalledWith({
+      currentPassedNeeds: [],
+      extraction: {
+        offTopic: false,
+        promptBlueprint: { goal: true, context: false, constraints: false, output: false },
+        civicTraits: { accessibleEntrance: true, clearSign: false, weatherCover: false },
+        evidence: ["Fix Town Hall."],
+        citizenLine: "The Town Hall plan needs more detail.",
+        nextHint: "requireAccessibleEntrance",
+      },
+      source: "live",
+    });
+    expect(report.cases[0]).toEqual({ name: "vague", passed: false, diagnosticCode: "semantic_mismatch" });
   });
 
   it("reports malformed extractions as schema failures", async () => {

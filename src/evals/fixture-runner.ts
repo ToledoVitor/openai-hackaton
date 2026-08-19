@@ -75,15 +75,17 @@ async function runFixture(fixture: PromptFixture, extract: PromptExtractor): Pro
     return { name: fixture.name, passed: false, diagnosticCode: "invalid_extraction" };
   }
 
-  if (!hasExpectedSemantics(fixture, parsedExtraction.data)) {
-    return { name: fixture.name, passed: false, diagnosticCode: "semantic_mismatch" };
-  }
+  const semanticsMatch = hasExpectedSemantics(fixture, parsedExtraction.data);
 
   const result = evaluateQuest({
     currentPassedNeeds: fixture.currentPassedNeeds,
     extraction: parsedExtraction.data,
     source: "live",
   });
+
+  if (!semanticsMatch) {
+    return { name: fixture.name, passed: false, diagnosticCode: "semantic_mismatch" };
+  }
 
   return hasExpectedProjection(fixture, result)
     ? { name: fixture.name, passed: true }
