@@ -1,5 +1,4 @@
 import { createRealtimeClientSecret } from "../../../src/server/realtime/create-client-secret";
-
 export const runtime = "nodejs";
 
 type RealtimeCredential = { value: string; expiresAt: number };
@@ -15,7 +14,6 @@ function json(body: unknown, status: number, cacheControl?: string): Response {
 export function createRealtimeTokenPost(dependencies: { createClientSecret: CreateClientSecret }) {
   return async function post(request: Request): Promise<Response> {
     void request;
-
     try {
       const credential = await dependencies.createClientSecret();
 

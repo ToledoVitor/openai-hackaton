@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import type { PromptExtraction } from "../../domain/contracts";
 import { ModerationUnavailableError } from "./errors";
-import { OpenAIEvaluationGateway, type OpenAIEvaluationClient } from "./openai-gateway";
+import {
+  createOpenAIEvaluationGateway,
+  OpenAIEvaluationGateway,
+  type OpenAIEvaluationClient,
+} from "./openai-gateway";
 
 const extraction: PromptExtraction = {
   offTopic: false,
@@ -50,6 +54,19 @@ function client(input: {
 }
 
 describe("OpenAIEvaluationGateway", () => {
+  it("constructs an eight-second single-attempt OpenAI client", () => {
+    const constructionOptions: unknown[] = [];
+
+    createOpenAIEvaluationGateway("sk-project-secret", (options) => {
+      constructionOptions.push(options);
+      return client().client;
+    });
+
+    expect(constructionOptions).toEqual([
+      { apiKey: "sk-project-secret", timeout: 8_000, maxRetries: 0 },
+    ]);
+  });
+
   it("sends the exact moderation model and player prompt", async () => {
     const fake = client({ moderationResult: { flagged: true } });
     const gateway = new OpenAIEvaluationGateway(fake.client);

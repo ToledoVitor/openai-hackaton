@@ -6,6 +6,9 @@ import {
   createHintSpeech,
   type SpeechGateway,
 } from "../../../src/server/speech/create-hint-speech";
+import {
+  readJsonWithLimit,
+} from "../../../src/server/guardrails";
 
 export const runtime = "nodejs";
 
@@ -29,6 +32,8 @@ type OpenAISpeechClientFactory = (
   options: ConstructorParameters<typeof OpenAI>[0],
 ) => OpenAISpeechClient;
 
+const SPEECH_BODY_LIMIT_BYTES = 1_024;
+
 function json(body: unknown, status: number): Response {
   return Response.json(body, { status });
 }
@@ -37,7 +42,7 @@ export function createOpenAISpeechGateway(
   apiKey: string,
   createClient: OpenAISpeechClientFactory = (options) => new OpenAI(options),
 ): SpeechGateway {
-  const openai = createClient({ apiKey, timeout: 15_000 });
+  const openai = createClient({ apiKey, timeout: 15_000, maxRetries: 0 });
 
   return {
     create: async ({ responseFormat, ...input }) => {
@@ -56,7 +61,7 @@ export function createSpeechPost(dependencies: { createHintSpeech: CreateHintSpe
     let hintKey: HintKey;
 
     try {
-      ({ hintKey } = speechRequestSchema.parse(await request.json()));
+      ({ hintKey } = speechRequestSchema.parse(await readJsonWithLimit(request, SPEECH_BODY_LIMIT_BYTES)));
     } catch {
       return json({ error: "invalid_request" }, 400);
     }
