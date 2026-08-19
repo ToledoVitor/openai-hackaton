@@ -6,11 +6,11 @@
 
 ## Relationship to existing design
 
-This specification supersedes the evaluation-API, mission-count, and localization portions of the original AI City Mayor design. ADR-0001 still governs semantic extraction plus deterministic rules, and ADR-0003 still governs server-side OpenAI credentials. Implementation evolves existing `POST /api/evaluate`, domain contracts, OpenAI gateway, request-size guard, and Cloudflare paid-route guard in place; it does not create a parallel application tree. Existing Town Hall/game contracts remain available until UI migration. UI, realtime-session setup, speech transport, and asset implementation remain outside this specification.
+This specification supersedes the evaluation-API, mission-count, localization, and voice-session portions of the original AI City Mayor design. ADR-0001 still governs semantic extraction plus deterministic rules, and ADR-0003 still governs server-side OpenAI credentials. Implementation evolves existing `POST /api/evaluate`, `POST /api/realtime-token`, domain contracts, OpenAI gateway, request-size guard, and Cloudflare paid-route guard in place; it does not create a parallel application tree. Existing Town Hall/game contracts remain available until UI migration. UI, Three.js rendering, and asset implementation remain outside this specification.
 
 ## Purpose
 
-Provide one stateless server API that evaluates typed or transcribed Prompt Attempts for four missions in Portuguese or English. OpenAI interprets semantic meaning; versioned local rules decide progression. The API returns stable effect keys and localized feedback that both UI and GPT Realtime Voice can consume.
+Provide stateless server APIs that evaluate typed or spoken Prompt Attempts and configure natural GPT Realtime Voice conversations for four missions in Portuguese or English. OpenAI interprets semantic meaning; versioned local rules decide progression. Evaluation returns stable effect keys and localized feedback consumed by both UI and voice.
 
 ## Goals
 
@@ -21,19 +21,21 @@ Provide one stateless server API that evaluates typed or transcribed Prompt Atte
 - Keep model judgment away from authoritative game progression.
 - Return one stable response contract for every mission.
 - Run a real temperature comparison during the fourth mission.
+- Create short-lived, mission-scoped Realtime sessions for natural speech-to-speech coaching.
+- Let voice submit candidate prompts without allowing the Realtime model to mutate game state.
 - Degrade safely and visibly when OpenAI calls fail.
 
 ## Non-goals
 
-- UI, Three.js rendering, asset generation, Realtime connection setup, or speech synthesis.
+- UI, Three.js rendering, asset generation, or browser WebRTC implementation.
 - Server sessions, accounts, databases, prompt history, or analytics.
-- Open-ended chat or model-authored game state.
+- Unbounded general chat or model-authored game state.
 - Supporting language values other than `portuguese` and `english`.
-- Evals API, fine-tuning, retrieval, tools, or agents.
+- Evals API, fine-tuning, retrieval, hosted tools, or Agents SDK orchestration.
 
 ## Architecture
 
-Use a single Next.js route:
+Use two Next.js routes:
 
 ```text
 POST /api/evaluate
@@ -46,6 +48,12 @@ POST /api/evaluate
   -> apply deterministic mission rules
   -> select localized feedback and effect keys
   -> return Turn Result
+
+POST /api/realtime-token
+  -> validate mission, language, progress, and safety identifier
+  -> build bounded bilingual voice instructions
+  -> mint short-lived Realtime client secret
+  -> return credential metadata with no-store
 ```
 
 ### Components
@@ -61,6 +69,10 @@ POST /api/evaluate
 `Feedback catalog` owns player-facing Portuguese and English text. Model prose never becomes authoritative coaching.
 
 `Fallback extractor` provides a conservative bilingual lexicon for known demo language. It feeds the same deterministic evaluator as the live extractor.
+
+`Realtime session factory` creates a `type: "realtime"` session with audio input/output, server voice activity detection, input transcription, mission-scoped instructions, and a `submit_prompt` function tool. It uses `OPENAI_REALTIME_MODEL` when configured and `gpt-realtime` otherwise.
+
+`Voice relay protocol` keeps authoritative work outside the Realtime model. When the model calls `submit_prompt`, the browser combines its `prompt` argument with current client-owned mission state and calls `POST /api/evaluate`. The browser sends the complete evaluation result back as the function-call output, then requests the next audio response. Voice explains that deterministic result; it never invents progress, effects, or completion.
 
 ## API contract
 
@@ -88,6 +100,7 @@ type EvaluateMissionRequest = {
   prompt: string;
   attempt: number;
   satisfiedCriteria: string[];
+  selectedChoice?: string;
   safetyIdentifier: string;
   temperatureChoice?: "low" | "medium" | "high";
 };
@@ -103,6 +116,8 @@ Valid mission-step combinations:
 | `city_school` | `creative_design`, `critical_instructions` |
 
 `temperatureChoice` is required for both `city_school` steps and forbidden for other missions. `prompt` is trimmed, must contain 1–600 Unicode characters, and is treated as untrusted data. `attempt` is a positive integer. `safetyIdentifier` is a random privacy-preserving installation ID matching existing `/^[A-Za-z0-9_-]{16,128}$/`, not an account ID or PII.
+
+`selectedChoice` carries the last `choice` returned by the API so a progressive attempt can retain its branch without requiring the player to repeat it. When present, it must be one of the selected mission's two path IDs. A newly extracted explicit choice replaces it.
 
 ### Internal model extraction
 
@@ -204,6 +219,84 @@ type EvaluationErrorResponse = {
 ```
 
 `temperature_required` includes `effectKeys: ["temperature_missing"]`, allowing UI to render the empty temperature control while keeping validation failure explicit.
+
+## Realtime Voice contract
+
+### Session request
+
+```ts
+type CreateRealtimeSessionRequest = {
+  missionId: MissionId;
+  stepId: MissionStepId;
+  language: Language;
+  attempt: number;
+  satisfiedCriteria: string[];
+  selectedChoice?: string;
+  safetyIdentifier: string;
+};
+```
+
+Mission-step validation, language values, attempt bounds, criterion bounds, and safety-identifier format match `POST /api/evaluate`. Voice-session creation does not require `temperatureChoice`; the UI adds its current Mission 4 selection when relaying a submitted prompt to evaluation. Request body limit is 8 KiB.
+
+### Session response
+
+```ts
+type CreateRealtimeSessionResponse = {
+  value: string;
+  expiresAt: number;
+  model: string;
+};
+```
+
+`value` is a short-lived OpenAI client secret, not the project API key. Responses use `Cache-Control: no-store`. Failures expose only `invalid_request`, `too_many_requests`, `realtime_unavailable`, or `service_unavailable`.
+
+### Realtime configuration
+
+Server sends this semantic configuration to `POST /v1/realtime/client_secrets`:
+
+```ts
+{
+  session: {
+    type: "realtime",
+    model,
+    output_modalities: ["audio"],
+    instructions,
+    audio: {
+      input: {
+        transcription: { model: "gpt-4o-mini-transcribe", language: "pt" | "en" },
+        noise_reduction: { type: "near_field" },
+        turn_detection: { type: "server_vad" }
+      },
+      output: { voice: "marin" }
+    },
+    tools: [submitPromptTool],
+    tool_choice: "auto"
+  }
+}
+```
+
+Selected `language` fixes both instruction language and transcription hint. No auto-detection or language switching occurs. Instructions tell voice to act as mayor/coach, explain one AI concept at a time, stay concise, ask the player to improve the prompt, and use `submit_prompt` only when the player presents a candidate command for the city. Player speech remains untrusted data.
+
+### Tool relay
+
+Realtime tool exposed to browser:
+
+```ts
+type SubmitPromptArguments = {
+  prompt: string;
+};
+```
+
+Browser protocol:
+
+1. Receive completed `submit_prompt` function call through WebRTC data channel.
+2. Validate bounded non-empty `prompt` locally.
+3. Call `POST /api/evaluate` with candidate prompt plus current `missionId`, `stepId`, `language`, `attempt`, `satisfiedCriteria`, `safetyIdentifier`, and current Mission 4 temperature selection when required.
+4. Send evaluation response as function-call output using original call ID.
+5. Send `response.create` so voice explains returned feedback and asks next useful question.
+6. Apply `progress` and `effectKeys` only from HTTP evaluation response, never from Realtime prose or tool arguments.
+
+Realtime conversation history exists only inside short-lived OpenAI session and browser connection. Application server stores no session record, transcript, audio, or prompt history.
 
 ## Language behavior
 
@@ -360,8 +453,11 @@ Fallback runs only after successful moderation. It selects exactly one Portugues
 - Exclude raw prompt content from application and error logs.
 - Use `store: false` for Responses API calls.
 - Send a stable random installation identifier matching `/^[A-Za-z0-9_-]{16,128}$/` as `safety_identifier`; reject any other format.
+- Set `OpenAI-Safety-Identifier` only on trusted server-side Realtime credential requests so OpenAI binds it to the ephemeral token.
+- Return only short-lived Realtime credentials to browsers. Never return, proxy, or log `OPENAI_API_KEY`.
 - Limit input and all model-generated strings.
 - Preserve existing Cloudflare Worker paid-route guard: 10 `POST /api/evaluate` requests per client IP per 60 seconds, with project-level OpenAI limits as deployment backstop. Local and non-Cloudflare requests continue to bypass this edge-only guard.
+- Apply a separate paid-route guard to `POST /api/realtime-token`; one client must not mint unlimited paid voice sessions.
 - Treat prompt injection text as player content. It cannot modify developer instructions, schemas, mission registry, or local rules.
 - Never move the API key into the browser when deployment cannot protect server secrets.
 
@@ -369,6 +465,7 @@ Fallback runs only after successful moderation. It selects exactly one Portugues
 
 ```text
 app/api/evaluate/route.ts
+app/api/realtime-token/route.ts
 src/domain/mission-contracts.ts
 src/domain/missions/mission-registry.ts
 src/domain/missions/evaluate-mission.ts
@@ -379,15 +476,21 @@ src/domain/missions/fallback/portuguese.ts
 src/server/evaluation/openai-gateway.ts
 src/server/evaluation/temperature-trial.ts
 src/server/evaluation/evaluate-prompt.ts
+src/server/realtime/create-client-secret.ts
+src/server/realtime/realtime-instructions.ts
 src/server/guardrails/paid-route-rate-limit.ts
 src/evals/mission-prompt-fixtures.ts
 ```
 
 The existing route owns HTTP only and retains `readJsonWithLimit` plus `Cache-Control: no-store`. OpenAI gateway owns network translation only. Mission evaluator and registry remain framework-independent and pure. Feedback/fallback catalogs may import shared criterion/effect types but never OpenAI SDK or Next.js modules.
 
-## Testing
+Realtime token route owns HTTP validation only. Realtime session factory owns OpenAI REST translation. Realtime instruction builder owns mission/language coaching context and tool declaration without importing Next.js modules.
 
-### Unit and contract tests
+## Verification
+
+This accelerated implementation adds no test files. It must pass repository typecheck and build, plus focused manual contract inspection for both routes. Automated coverage below remains required follow-up before production launch.
+
+### Deferred unit and contract tests
 
 - Pure evaluator: no progress, one criterion, cumulative progress, repeated criteria, both paths, off-topic, unsafe redirect, mission completion, and Mission 4 cross-step completion.
 - Dependency enforcement: path features require a path; comparison requires successful temperature generation.
@@ -395,7 +498,7 @@ The existing route owns HTTP only and retains `readJsonWithLimit` plus `Cache-Co
 - Request validation: every invalid mission-step pair, language omission/value, prompt bounds, attempt bounds, identifier bounds, and temperature presence/absence.
 - Error mapping: moderation failure, extraction timeout, rate limit, invalid model output, fallback miss, and temperature generation failure.
 
-### Fixed bilingual fixtures
+### Deferred fixed bilingual fixtures
 
 Run 64 semantic fixtures: four missions × two languages × eight cases. Cases cover vague, partial, each complete path, synonyms, contradiction, off-topic, and prompt injection. Equivalent Portuguese and English meaning must yield equivalent criterion, status, and effect IDs.
 
@@ -403,12 +506,15 @@ Run 12 temperature fixtures: three choices × two steps × two languages. Assert
 
 Explicitly test language mismatch: the response and developer context remain in the parameter-selected language. No detection or automatic catalog switch occurs.
 
-### Fallback and integration
+### Delivery checks and deferred integration coverage
 
-- Test Portuguese and English fallback catalogs independently.
-- Ensure fallback never grants criteria from the unselected language catalog.
-- Keep live OpenAI integration tests opt-in behind `OPENAI_API_KEY`.
+- Typecheck all new contracts and route integrations.
+- Build production bundle without exposing `OPENAI_API_KEY`.
+- Inspect Portuguese and English session payloads and evaluator instructions manually.
+- Defer Portuguese/English fallback catalog automation and live integration tests.
 - Verify API key is absent from browser bundles and API payloads.
+- Verify Realtime configuration uses `type: "realtime"`, selected language, mission context, stable safety header, `submit_prompt`, and bounded credential output.
+- Verify tool relay documentation never grants Realtime prose authority over progress or effects.
 - Verify raw prompts are absent from logs and persistence.
 - Verify every effect key emitted by code exists in `docs/ASSET-EFFECT-CATALOG.md`, and every catalog key exists in the canonical effect-key type.
 
@@ -422,6 +528,10 @@ Explicitly test language mismatch: the response and developer context remain in 
 - Unsafe and unmoderated input never reaches evaluator or generator.
 - OpenAI failure never corrupts or regresses client progress.
 - UI and voice consume identical localized feedback.
+- Realtime session produces audio conversation and exposes `submit_prompt` for browser relay to evaluation.
+- Session request language controls coaching and transcription context without auto-detection.
+- Realtime failure leaves typed `POST /api/evaluate` flow available.
+- Project API key never crosses server boundary; browser receives only short-lived client secret.
 - Every returned effect key has an implementation-ready asset brief.
 
 ## Official OpenAI references
@@ -430,3 +540,5 @@ Explicitly test language mismatch: the response and developer context remain in 
 - [GPT-5.6 model guidance](https://developers.openai.com/api/docs/guides/latest-model)
 - [GPT-5.2 temperature compatibility](https://developers.openai.com/api/docs/guides/latest-model?model=gpt-5.2)
 - [Moderations API](https://developers.openai.com/api/reference/cli/resources/moderations)
+- [Realtime API with WebRTC](https://developers.openai.com/api/docs/guides/realtime-webrtc)
+- [GPT Realtime model](https://developers.openai.com/api/docs/models/gpt-realtime)

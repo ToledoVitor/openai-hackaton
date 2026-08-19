@@ -19,15 +19,16 @@ Configure `OPENAI_API_KEY` em `.env` a partir de `.env.example`; a chave deve pe
 
 O backend preservado nesta integração expõe:
 
-- `POST /api/evaluate` para avaliar uma tentativa de prompt.
-- `POST /api/realtime-token` para criar uma credencial temporária de transcrição.
+- `POST /api/evaluate` para avaliar tentativas nas quatro missões, em português ou inglês.
+- `POST /api/realtime-token` para criar sessão temporária de conversa por voz, com áudio bidirecional e tool `submit_prompt`.
 - `POST /api/speech` para gerar áudio de uma dica aprovada.
 
-A interface 3D e as rotas de API compartilham a mesma aplicação, enquanto a conexão das missões visuais ao fluxo livre de prompts continua como próxima etapa.
+A sessão Realtime nunca decide progresso. O frontend encaminha `submit_prompt` para `/api/evaluate` e aplica somente `progress` e `effectKeys` retornados pelo avaliador determinístico.
 
 ## Documentação
 
 - [Design da API bilíngue para quatro missões](docs/superpowers/specs/2026-08-19-mission-evaluation-api-design.md)
+- [Contrato HTTP e integração Realtime Voice](docs/API.md)
 - [Catálogo de efeitos para geração de assets](docs/ASSET-EFFECT-CATALOG.md)
 
 ## Assets

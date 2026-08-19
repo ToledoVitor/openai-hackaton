@@ -9,6 +9,7 @@
 5. Use [Buildable Design Specification](superpowers/specs/2026-08-19-ai-city-mayor-game-design.md) as implementation source of truth.
 6. Use [Mission Evaluation API Design](superpowers/specs/2026-08-19-mission-evaluation-api-design.md) for the four-mission bilingual evaluator; it supersedes older API, mission-count, and localization decisions.
 7. Use [Asset Effect Catalog](ASSET-EFFECT-CATALOG.md) for stable API-to-scene effect keys and asset briefs.
+8. Use [API and Realtime Voice](API.md) for HTTP payloads and frontend WebRTC relay protocol.
 
 ## Decision records
 
