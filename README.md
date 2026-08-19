@@ -33,3 +33,13 @@ A interface 3D e as rotas de API compartilham a mesma aplicação, enquanto a co
 ## Assets
 
 Consulte [ATTRIBUTIONS.md](ATTRIBUTIONS.md) para créditos e licenças CC0.
+
+## Áudio
+
+Trilha urbana e efeitos usam arquivos CC0 existentes. Fontes, autores, licenças e checksums ficam em [`public/audio/SOURCES.md`](public/audio/SOURCES.md).
+
+O áudio inicia após primeira interação do jogador. Controle no topo permite silenciar ou reativar. Para ouvir isoladamente:
+
+```bash
+npm run audio:preview
+```

@@ -40,6 +40,8 @@ button { font: inherit; }
 .indicadores span { color: #789095; font-size: 10px; text-transform: uppercase; letter-spacing: 1.1px; }
 .indicadores strong { margin-top: 4px; font-size: 14px; }
 .relogio { color: #537176; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.audio-toggle { padding: 8px 11px; border: 0; border-radius: 999px; color: #315d62; background: rgba(22,141,130,.1); cursor: pointer; font-size: 11px; font-weight: 800; white-space: nowrap; }
+.audio-toggle:hover { color: white; background: #168d82; }
 
 .projeto {
   position: fixed;
@@ -93,6 +95,7 @@ button { font: inherit; }
   .barra-superior { top: 10px; left: 10px; right: 10px; min-height: 58px; padding: 10px 12px; }
   .marca { min-width: 0; }
   .marca small, .indicadores div:not(:nth-child(2)), .relogio { display: none; }
+  .audio-toggle { padding: 7px 9px; font-size: 10px; }
   .indicadores { margin-left: auto; margin-right: 0; }
   .projeto { left: 10px; bottom: 10px; width: calc(100vw - 20px); padding: 16px; }
   .projeto p { min-height: 0; }

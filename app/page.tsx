@@ -1,11 +1,39 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createAudioManager } from '@/src/audio';
 
 export default function HomePage() {
+  const audioRef = useRef<ReturnType<typeof createAudioManager> | null>(null);
+  const [audioMuted, setAudioMuted] = useState(false);
+
   useEffect(() => {
     void import('@/src/game/main');
+
+    const audio = createAudioManager();
+    audioRef.current = audio;
+    setAudioMuted(audio.getPreferences().muted);
+
+    const startAudio = () => audio.start();
+    window.addEventListener('pointerdown', startAudio, { once: true });
+    window.addEventListener('keydown', startAudio, { once: true });
+
+    return () => {
+      window.removeEventListener('pointerdown', startAudio);
+      window.removeEventListener('keydown', startAudio);
+      audio.stop();
+      audioRef.current = null;
+    };
   }, []);
+
+  function toggleAudio() {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const muted = !audioMuted;
+    audio.start();
+    audio.setMuted(muted);
+    setAudioMuted(muted);
+  }
 
   return (
     <main id="app">
@@ -22,6 +50,14 @@ export default function HomePage() {
           <div><span>Recursos</span><strong id="recursos">R$ 2.400.000</strong></div>
         </div>
         <div className="relogio" id="relogio">Dia 1 · 09:00</div>
+        <button
+          className="audio-toggle"
+          type="button"
+          aria-pressed={audioMuted}
+          onClick={toggleAudio}
+        >
+          {audioMuted ? 'Ativar som' : 'Silenciar som'}
+        </button>
       </header>
 
       <section className="projeto" aria-labelledby="missao-titulo">
