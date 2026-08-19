@@ -94,14 +94,14 @@ export function evaluateMission(input: {
       language: input.request.language,
       source: input.source,
       status: "redirected",
-      choice: null,
+      choice: resolvedChoice,
       progress: { satisfied: [...satisfied], newlySatisfied: [], missing: [...missing] },
       teachingConcept: definition.teachingConcept[input.request.language],
       feedback: createFeedback({
         language: input.request.language,
         missionId: input.request.missionId,
         status: "redirected",
-        choice: null,
+        choice: resolvedChoice,
         nextMissingCriterion: missing[0] ?? null,
       }),
       effectKeys: ["off_topic_no_change"],
@@ -142,11 +142,14 @@ export function evaluateMission(input: {
   if (input.request.missionId === "city_school") {
     candidate.add("temperature_provided");
     if (input.temperatureTrial?.status === "generated") {
-      candidate.add(
-        input.request.stepId === "creative_design"
-          ? "creative_temperature_tested"
-          : "critical_temperature_tested",
-      );
+      const validCreativeTrial =
+        input.request.stepId === "creative_design" &&
+        input.request.temperatureChoice !== "low";
+      const validCriticalTrial =
+        input.request.stepId === "critical_instructions" &&
+        input.request.temperatureChoice === "low";
+      if (validCreativeTrial) candidate.add("creative_temperature_tested");
+      if (validCriticalTrial) candidate.add("critical_temperature_tested");
     }
   }
 
