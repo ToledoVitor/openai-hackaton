@@ -4,6 +4,10 @@ Jogo de gestão urbana em uma cidade low-poly interativa que reúne o frontend T
 
 A entrada apresenta a cidade, pede o nome do jogador e inicia quatro missões sobre escola, mobilidade, infraestrutura e educação.
 
+## Acesso público
+
+[Jogar AI City](https://cidade-viva-hackathon.pr-vitortoledo.chatgpt.site)
+
 ## Executar
 
 ```bash
