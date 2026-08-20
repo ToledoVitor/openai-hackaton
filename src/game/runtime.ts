@@ -354,6 +354,11 @@ async function submitPlan(prompt: string): Promise<EvaluateMissionResponse | { e
     });
     criteria.set(missionId, response.progress.satisfied);
     if (response.choice) choices.set(missionId, response.choice);
+    else choices.delete(missionId);
+    if (response.progressReceipt) {
+      progressReceipt = response.progressReceipt;
+      saveProgressReceipt(window.localStorage, progressReceipt);
+    }
     const success = response.status === 'success';
     const resolved = resolveMissionEvaluation({
       journey,
@@ -364,8 +369,6 @@ async function submitPlan(prompt: string): Promise<EvaluateMissionResponse | { e
     });
 
     if (success) {
-      progressReceipt = response.progressReceipt;
-      saveProgressReceipt(window.localStorage, progressReceipt!);
       if (!resolved.completionError) {
         journey = resolved.journey;
         saveJourneyState(window.localStorage, journey);
@@ -621,6 +624,14 @@ export async function start(playerProfile: PlayerProfile) {
       activeMissionId: localJourney.activeMissionId,
     }));
     activeMissionId = journey.activeMissionId;
+    criteria.clear();
+    choices.clear();
+    for (const missionId of LEARNING_MISSION_IDS) {
+      const restoredCriteria = verified.criteria[missionId];
+      if (restoredCriteria) criteria.set(missionId, [...restoredCriteria]);
+      const restoredChoice = verified.choices[missionId];
+      if (restoredChoice) choices.set(missionId, restoredChoice);
+    }
     if (activeMissionId) selectedNpc = getNpcForMission(activeMissionId);
     progressReceipt = verified.progressReceipt;
     if (progressReceipt) saveProgressReceipt(window.localStorage, progressReceipt);
