@@ -124,6 +124,18 @@ export class Cidade {
         this.mostrar(this.escolaCompacta, true);
         this.mostrar(this.escolaPatio, false);
         break;
+      case 'school_hub':
+        this.mostrar(this.escolaCompacta, true);
+        this.mostrar(this.escolaPatio, false);
+        this.mostrar(this.barreiras, false);
+        this.mostrar(this.fumacaConstrucao, false);
+        break;
+      case 'school_greenway':
+        this.mostrar(this.escolaCompacta, false);
+        this.mostrar(this.escolaPatio, true);
+        this.mostrar(this.barreiras, false);
+        this.mostrar(this.fumacaConstrucao, false);
+        break;
       case 'urban_repair':
         this.mostrar(this.semaforos, true);
         this.mostrar(this.lixoProblema, false);
@@ -184,9 +196,24 @@ export class Cidade {
       this.escolaCompacta, this.escolaPatio, this.centroBasico, this.centroCompleto,
       this.semaforos, this.ruaCalma,
       this.lixoProblema, this.coletaOrganizada, this.torreAgua, this.laboratorio,
-      this.biblioteca, this.celebracao,
+      this.biblioteca, this.celebracao, this.fumacaConstrucao,
     ].forEach((objeto) => this.mostrar(objeto, false));
     this.mostrar(this.barreiras, true);
+    this.pulso = 1;
+    return this.estado();
+  }
+
+  aplicarProgresso(missionId: LearningMissionId, satisfiedCriteria: readonly string[]) {
+    if (this.decisoes.includes(missionId) || satisfiedCriteria.length === 0) return this.estado();
+    if (missionId === 'apartment_construction') this.mostrar(this.centroBasico, true);
+    if (missionId === 'hospital_construction') this.mostrar(this.escolaCompacta, true);
+    if (missionId === 'urban_repair' && satisfiedCriteria.includes('urban_safety_check_defined')) {
+      this.mostrar(this.semaforos, true);
+    }
+    if (missionId === 'school_construction') {
+      this.mostrar(this.fumacaConstrucao, true);
+      this.mostrar(this.barreiras, !satisfiedCriteria.includes('school_accessible'));
+    }
     this.pulso = 1;
     return this.estado();
   }
@@ -695,6 +722,17 @@ export class Cidade {
     barreiras.add(placa);
     obra.add(barreiras);
     this.barreiras = barreiras;
+
+    const estrutura = new THREE.Group();
+    const material = new THREE.MeshStandardMaterial({ color: 0xd5a86a, roughness: 0.86 });
+    for (const [x, z] of [[-3, -2], [3, -2], [-3, 2], [3, 2]]) {
+      const pilar = new THREE.Mesh(new THREE.BoxGeometry(0.28, 2.2, 0.28), material);
+      pilar.position.set(x, 1.15, z);
+      estrutura.add(pilar);
+    }
+    estrutura.visible = false;
+    obra.add(estrutura);
+    this.fumacaConstrucao = estrutura;
 
     this.destaque = new THREE.Mesh(
       new THREE.TorusGeometry(3.9, 0.07, 8, 72),

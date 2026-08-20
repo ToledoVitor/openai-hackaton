@@ -12,6 +12,7 @@ import {
 import { getStoredLanguage, LANGUAGE_CHANGE_EVENT } from '../client/language';
 import { fetchVerifiedProgress } from '../client/progress-client';
 import { uiText } from '../client/ui-copy';
+import { checkpointGroups, criterionText } from '../client/checkpoint-groups';
 import {
   createInitialJourneyState,
   getLearningMission,
@@ -88,6 +89,7 @@ const ui = {
   purpose: document.querySelector<HTMLElement>('#missao-proposito')!,
   briefing: document.querySelector<HTMLElement>('#missao-briefing')!,
   hint: document.querySelector<HTMLElement>('#dica-missao')!,
+  checkpoints: document.querySelector<HTMLElement>('#checkpoints')!,
   form: document.querySelector<HTMLFormElement>('#prompt-form')!,
   prompt: document.querySelector<HTMLTextAreaElement>('#prompt-texto')!,
   submit: document.querySelector<HTMLButtonElement>('#avaliar-plano')!,
@@ -158,7 +160,14 @@ function missionIndex(missionId: LearningMissionId) {
 }
 
 function updateCityEffects() {
-  for (const missionId of journey.completedMissionIds) cidade.aplicarEscolha(missionId);
+  for (const missionId of journey.completedMissionIds) {
+    cidade.aplicarEscolha(choices.get(missionId) ?? missionId);
+  }
+  for (const missionId of LEARNING_MISSION_IDS) {
+    if (!journey.completedMissionIds.includes(missionId)) {
+      cidade.aplicarProgresso(missionId, criteria.get(missionId) ?? []);
+    }
+  }
 }
 
 function updateCityState() {
@@ -203,6 +212,34 @@ function renderMissionList() {
     button.addEventListener('click', () => selectMission(missionId));
     ui.missionList.append(button);
   });
+}
+
+function renderCheckpoints() {
+  ui.checkpoints.replaceChildren();
+  if (!activeMissionId) return;
+  const definition = getLearningMission(activeMissionId);
+  const response = lastResponse?.missionId === activeMissionId ? lastResponse : null;
+  const savedCriteria = criteria.get(activeMissionId) ?? [];
+  const progress = response?.progress ?? {
+    satisfied: savedCriteria,
+    newlySatisfied: [],
+    regressed: [],
+    missing: definition.criteria.filter((criterion) => !savedCriteria.includes(criterion)),
+  };
+  for (const group of checkpointGroups(progress, language)) {
+    const section = document.createElement('section');
+    section.className = `checkpoint checkpoint-${group.id}`;
+    const title = document.createElement('h2');
+    title.textContent = group.title;
+    const list = document.createElement('ul');
+    for (const criterion of group.criteria) {
+      const item = document.createElement('li');
+      item.textContent = criterionText(criterion, language);
+      list.append(item);
+    }
+    section.append(title, list);
+    ui.checkpoints.append(section);
+  }
 }
 
 function renderNpc(npcId = selectedNpc) {
@@ -283,6 +320,7 @@ function renderMission() {
   ui.briefing.textContent = copy.briefing;
   ui.hint.textContent = copy.hint;
   ui.hint.classList.add('oculto');
+  renderCheckpoints();
   ui.form.classList.toggle('oculto', access !== 'available');
   ui.result.classList.toggle('oculto', lastResponse === null && access !== 'completed');
   if (access === 'completed' && !lastResponse) {
@@ -359,6 +397,7 @@ async function submitPlan(prompt: string): Promise<EvaluateMissionResponse | { e
       progressReceipt = response.progressReceipt;
       saveProgressReceipt(window.localStorage, progressReceipt);
     }
+    if (response.status === 'partial') cidade.aplicarProgresso(missionId, response.progress.satisfied);
     const success = response.status === 'success';
     const resolved = resolveMissionEvaluation({
       journey,
@@ -372,7 +411,7 @@ async function submitPlan(prompt: string): Promise<EvaluateMissionResponse | { e
       if (!resolved.completionError) {
         journey = resolved.journey;
         saveJourneyState(window.localStorage, journey);
-        cidade.aplicarEscolha(missionId);
+        cidade.aplicarEscolha(response.choice ?? missionId);
         renderMissionList();
         updateCityState();
         updateProgress();
@@ -394,6 +433,7 @@ async function submitPlan(prompt: string): Promise<EvaluateMissionResponse | { e
       ui.next.textContent = recommendNextMission(journey) === null
         ? uiText(language, 'journey_complete') : uiText(language, 'next_mission');
       if (success) ui.form.classList.add('oculto');
+      renderCheckpoints();
     }
     return response;
   } catch (error) {

@@ -34,6 +34,13 @@ export const MISSION_SCENE_LOCATIONS: Readonly<Record<LearningMissionId, Mission
     explorerStart: [21, 7],
     characters: [[11.7, 7.8, Math.PI], [14.3, -3.2, 0]],
   },
+  school_construction: {
+    cameraPosition: [8, 10, 21],
+    cameraTarget: [-8, 1.2, 7],
+    highlight: [-8, 7],
+    explorerStart: [-8, 13],
+    characters: [[-9.7, 10.7, 0.05], [-7.3, 10.65, -0.05]],
+  },
 };
 
 export function urbanProblemRemains(decisions: readonly string[]): boolean {

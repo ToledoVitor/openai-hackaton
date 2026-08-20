@@ -4,6 +4,7 @@ const MISSION_COST: Readonly<Record<LearningMissionId, number>> = {
   apartment_construction: 450_000,
   hospital_construction: 780_000,
   urban_repair: 160_000,
+  school_construction: 610_000,
 };
 
 export function deriveCityState(completedMissionIds: readonly LearningMissionId[]) {

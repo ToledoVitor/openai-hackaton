@@ -166,7 +166,7 @@ export const LEARNING_MISSIONS = [
         nextStep: "Continue escolhendo missões livres para melhorar a cidade.",
       },
       english: {
-        title: "A school open to the neighborhood",
+        title: "Neighborhood School, open to all",
         purpose: "Practice clear public requirements for a safe, accessible, well-sited school.",
         concept: "Public goal, scale, access, safety, and site choice",
         objective: "Design a public school that serves students and families with safe access.",

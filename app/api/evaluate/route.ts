@@ -17,7 +17,6 @@ import {
 import {
   canonicalCompletedMissionIds,
   isLearningMissionId,
-  type LearningMissionId,
 } from "../../../src/domain/learning-journey";
 import { canonicalMissionCriteria } from "../../../src/domain/missions/progress-snapshot";
 import { EvaluationError, ModerationUnavailableError } from "../../../src/server/evaluation/errors";

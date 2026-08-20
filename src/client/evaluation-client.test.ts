@@ -78,9 +78,9 @@ describe("evaluateMissionOnServer", () => {
   });
 
   it("rejects learning mission success without a server progress receipt", async () => {
-    const { progressReceipt: _receipt, ...unsigned } = result;
     const fetcher = async () => Response.json({
-      ...unsigned,
+      ...result,
+      progressReceipt: undefined,
       status: "success",
       effectKeys: ["housing_complete"],
     });
@@ -91,8 +91,7 @@ describe("evaluateMissionOnServer", () => {
   });
 
   it("rejects partial progress without a server progress receipt", async () => {
-    const { progressReceipt: _receipt, ...unsigned } = result;
-    const fetcher = async () => Response.json(unsigned);
+    const fetcher = async () => Response.json({ ...result, progressReceipt: undefined });
 
     await expect(evaluateMissionOnServer(request, { fetcher })).rejects.toMatchObject({
       code: "invalid_response",
