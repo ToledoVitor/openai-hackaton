@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   LEARNING_MISSIONS,
   completeLearningMission,
-  canonicalMissionCriteria,
   createInitialJourneyState,
   getMissionAccess,
   isLearningMissionId,
@@ -12,6 +11,7 @@ import {
   recommendNextMission,
   selectLearningMission,
 } from "./learning-journey";
+import { canonicalMissionCriteria } from "./missions/progress-snapshot";
 
 describe("learning journey", () => {
   it("centralizes complete bilingual teaching metadata for independent missions", () => {

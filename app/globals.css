@@ -273,7 +273,7 @@ button { font: inherit; }
 .checkpoint li { padding: 3px 6px; border-radius: 99px; color: #405f64; background: #e6f1ed; font-size: 9px; font-weight: 750; }
 .checkpoint-new { background: #eef9ea; }.checkpoint-new li { background: #d8f0c8; }
 .checkpoint-pending { background: #fff8de; }.checkpoint-pending li { background: #f9e6a4; }
-.checkpoint-regressed { background: #fff0ed; }.checkpoint-regressed li { background: #f8d1c7; }
+.revisao-missao { margin: 0 0 10px; padding: 8px 10px; border-radius: 10px; color: #7a3930; background: #fff0ed; font-size: 10px; font-weight: 750; }
 .voz-opcional { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 9px; border: 1px solid #d6e8e3; border-radius: 12px; background: #f7fbf9; }
 .projeto .voz-opcional button { width: auto; min-height: 44px; font-size: 9px; }
 .voz-meta { min-width: 0; }

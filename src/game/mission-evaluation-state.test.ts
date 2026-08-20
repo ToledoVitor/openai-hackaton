@@ -41,4 +41,23 @@ describe("mission evaluation response scope", () => {
     expect(resolved.journey).toEqual(apartmentSelected);
     expect(resolved.shouldPresent).toBe(false);
   });
+
+  it("does not present a delayed partial revision after switching missions", () => {
+    const schoolSelected = selectLearningMission(
+      createInitialJourneyState(),
+      "school_construction",
+    ).state;
+
+    const resolved = resolveMissionEvaluation({
+      journey: schoolSelected,
+      requestMissionId: "apartment_construction",
+      requestLanguage: "english",
+      currentLanguage: "english",
+      status: "partial",
+    });
+
+    expect(resolved.journey).toEqual(schoolSelected);
+    expect(resolved.journey.activeMissionId).toBe("school_construction");
+    expect(resolved.shouldPresent).toBe(false);
+  });
 });

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { checkpointGroups } from "./checkpoint-groups";
+import { checkpointGroups, regressionNotice } from "./checkpoint-groups";
 
 describe("mission checkpoint groups", () => {
-  it("separates newly fixed, stable, pending, and revised requirements", () => {
+  it("separates newly fixed, stable, and pending requirements", () => {
     const groups = checkpointGroups({
       satisfied: ["school_goal_clear", "school_accessible"],
       newlySatisfied: ["school_accessible"],
@@ -15,7 +15,15 @@ describe("mission checkpoint groups", () => {
       { id: "complete", title: "Concluído", criteria: ["school_goal_clear"] },
       { id: "new", title: "Corrigido agora", criteria: ["school_accessible"] },
       { id: "pending", title: "Ainda falta", criteria: ["school_scale_defined", "school_safety_defined"] },
-      { id: "regressed", title: "Revisado", criteria: ["school_scale_defined"] },
     ]);
+  });
+
+  it("describes revised decisions outside the checkpoint groups", () => {
+    expect(regressionNotice({
+      satisfied: ["school_goal_clear"],
+      newlySatisfied: [],
+      regressed: ["school_scale_defined"],
+      missing: ["school_scale_defined"],
+    }, "portuguese")).toBe("A decisão anterior sobre Escala da escola foi substituída; revise este requisito.");
   });
 });

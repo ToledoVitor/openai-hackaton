@@ -12,7 +12,7 @@ import {
 import { getStoredLanguage, LANGUAGE_CHANGE_EVENT } from '../client/language';
 import { fetchVerifiedProgress } from '../client/progress-client';
 import { uiText } from '../client/ui-copy';
-import { checkpointGroups, criterionText } from '../client/checkpoint-groups';
+import { checkpointGroups, criterionText, regressionNotice } from '../client/checkpoint-groups';
 import {
   createInitialJourneyState,
   getLearningMission,
@@ -33,6 +33,7 @@ import { deriveCityState } from './city-state';
 import type { PlayerProfile } from './entrada';
 import { moveExplorer, movementFromKeys, type ExplorerBounds } from './exploration';
 import { createLazyVoice } from './lazy-voice';
+import { createMissionDrafts } from './mission-drafts';
 import { resolveMissionEvaluation } from './mission-evaluation-state';
 import { MISSION_SCENE_LOCATIONS } from './mission-scene';
 import { voicePresentation, type VoiceUiState } from './voice-state';
@@ -90,6 +91,7 @@ const ui = {
   briefing: document.querySelector<HTMLElement>('#missao-briefing')!,
   hint: document.querySelector<HTMLElement>('#dica-missao')!,
   checkpoints: document.querySelector<HTMLElement>('#checkpoints')!,
+  regressionNotice: document.querySelector<HTMLElement>('#regression-notice')!,
   form: document.querySelector<HTMLFormElement>('#prompt-form')!,
   prompt: document.querySelector<HTMLTextAreaElement>('#prompt-texto')!,
   submit: document.querySelector<HTMLButtonElement>('#avaliar-plano')!,
@@ -147,6 +149,7 @@ let elapsed = 0;
 const attempts = new Map<LearningMissionId, number>();
 const criteria = new Map<LearningMissionId, string[]>();
 const choices = new Map<LearningMissionId, string>();
+const drafts = createMissionDrafts();
 
 const explorerBounds: ExplorerBounds = {
   minX: -35, maxX: 35, minZ: -35, maxZ: 35,
@@ -216,7 +219,11 @@ function renderMissionList() {
 
 function renderCheckpoints() {
   ui.checkpoints.replaceChildren();
-  if (!activeMissionId) return;
+  if (!activeMissionId) {
+    ui.regressionNotice.hidden = true;
+    ui.regressionNotice.textContent = '';
+    return;
+  }
   const definition = getLearningMission(activeMissionId);
   const response = lastResponse?.missionId === activeMissionId ? lastResponse : null;
   const savedCriteria = criteria.get(activeMissionId) ?? [];
@@ -226,6 +233,9 @@ function renderCheckpoints() {
     regressed: [],
     missing: definition.criteria.filter((criterion) => !savedCriteria.includes(criterion)),
   };
+  const revision = regressionNotice(progress, language);
+  ui.regressionNotice.hidden = revision === null;
+  ui.regressionNotice.textContent = revision ?? '';
   for (const group of checkpointGroups(progress, language)) {
     const section = document.createElement('section');
     section.className = `checkpoint checkpoint-${group.id}`;
@@ -340,12 +350,13 @@ function selectMission(missionId: LearningMissionId) {
     return false;
   }
   voiceState = stopVoiceInteraction(voiceScope, window.cidadeAudio);
+  if (activeMissionId) drafts.save(activeMissionId, ui.prompt.value);
   journey = selection.state;
   saveJourneyState(window.localStorage, journey);
   activeMissionId = missionId;
   selectedNpc = getNpcForMission(missionId);
   lastResponse = null;
-  ui.prompt.value = '';
+  ui.prompt.value = drafts.read(missionId);
   ui.promptStatus.textContent = '';
   renderMission();
   renderNpc();
@@ -369,6 +380,7 @@ async function submitPlan(prompt: string): Promise<EvaluateMissionResponse | { e
   }
   const missionId = activeMissionId;
   const requestLanguage = language;
+  drafts.save(missionId, ui.prompt.value);
   evaluating = true;
   renderMissionList();
   ui.submit.disabled = true;
@@ -474,6 +486,7 @@ function resetGame() {
   attempts.clear();
   criteria.clear();
   choices.clear();
+  drafts.clear();
   lastResponse = null;
   saveJourneyState(window.localStorage, journey);
   progressReceipt = undefined;

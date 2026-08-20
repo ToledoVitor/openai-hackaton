@@ -173,7 +173,7 @@ export function evaluateMission(input: {
   const satisfied = definition.criteria.filter((criterion) => candidate.has(criterion));
   const missing = definition.criteria.filter((criterion) => !candidate.has(criterion));
   const status: EvaluateMissionResponse["status"] =
-    missing.length === 0 ? "success" : newlySatisfied.length === 0 ? "retry" : "partial";
+    missing.length === 0 ? "success" : newlySatisfied.length === 0 && regressed.length === 0 ? "retry" : "partial";
   const effectKeys = effectsFor({
     request: input.request,
     extraction: { ...input.extraction, choice: resolvedChoice },

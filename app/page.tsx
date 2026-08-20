@@ -69,6 +69,7 @@ const GameUi = memo(function GameUi() {
         </div>
 
         <section className="checkpoints" id="checkpoints" aria-live="polite" />
+        <p className="revisao-missao" id="regression-notice" role="status" aria-live="polite" hidden />
 
         <form className="compositor-prompt" id="prompt-form">
           <label htmlFor="prompt-texto" id="rotulo-plano" />

@@ -37,6 +37,27 @@ describe("progress verification route", () => {
     });
   });
 
+  it("restores a signed partial regression after reload", async () => {
+    const post = createProgressPost({
+      verify: (receipt) => receipt === "signed.regressed"
+        ? {
+            completedMissionIds: [],
+            criteria: { apartment_construction: ["housing_goal_clear"] },
+            choices: { apartment_construction: "balanced_housing" },
+          }
+        : null,
+    });
+
+    const response = await post(request({
+      progressReceipt: "signed.regressed",
+      safetyIdentifier: "install_1234567890abcdef",
+    }));
+
+    await expect(response.json()).resolves.toMatchObject({
+      criteria: { apartment_construction: ["housing_goal_clear"] },
+    });
+  });
+
   it("recovers a forged receipt to empty progress", async () => {
     const post = createProgressPost({ verify: () => null });
     const response = await post(request({

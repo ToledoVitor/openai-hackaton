@@ -43,7 +43,7 @@ describe("bilingual interface copy", () => {
   it("labels incremental checkpoint groups and the independent school in both languages", () => {
     expect(uiText("portuguese", "checkpoint_new")).toBe("Corrigido agora");
     expect(uiText("portuguese", "checkpoint_pending")).toBe("Ainda falta");
-    expect(uiText("english", "checkpoint_regressed")).toBe("Revised");
+    expect(uiText("english", "checkpoint_pending")).toBe("Still needed");
     expect(localizeMission("school_construction", "english").title).toContain("School");
   });
 });

@@ -61,6 +61,7 @@ describe("connected learning mission evaluation", () => {
     expect(initial.status).toBe("partial");
     expect(initial.progress.newlySatisfied).toContain("school_scale_defined");
     expect(smallerRevision.progress.regressed).toEqual(["school_scale_defined"]);
+    expect(smallerRevision.status).toBe("partial");
     expect(smallerRevision.progress.satisfied).toContain("school_accessible");
   });
 
@@ -93,6 +94,7 @@ describe("connected learning mission evaluation", () => {
     });
 
     expect(result.progress.regressed).toEqual(["housing_budget_defined"]);
+    expect(result.status).toBe("partial");
     expect(result.progress.satisfied).toEqual([
       "housing_goal_clear",
       "housing_accessibility_defined",

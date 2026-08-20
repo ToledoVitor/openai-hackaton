@@ -302,31 +302,6 @@ export function isCanonicalCompletedMissionIds(values: readonly unknown[]): valu
   return canonical.length === values.length && canonical.every((missionId, index) => values[index] === missionId);
 }
 
-export type MissionCriteriaSnapshot = Readonly<Record<LearningMissionId, readonly string[]>>;
-
-export function canonicalMissionCriteria(
-  values: Readonly<Partial<Record<LearningMissionId, readonly unknown[]>>>,
-): Record<LearningMissionId, string[]> {
-  return Object.fromEntries(LEARNING_MISSION_IDS.map((missionId) => {
-    const allowed = getLearningMission(missionId).criteria;
-    const actual = new Set(values[missionId]?.filter((criterion): criterion is string =>
-      typeof criterion === "string" && allowed.includes(criterion),
-    ) ?? []);
-    return [missionId, allowed.filter((criterion) => actual.has(criterion))];
-  })) as Record<LearningMissionId, string[]>;
-}
-
-export function isCanonicalMissionCriteria(values: unknown): values is MissionCriteriaSnapshot {
-  if (typeof values !== "object" || values === null || Array.isArray(values)) return false;
-  const record = values as Record<string, unknown>;
-  return LEARNING_MISSION_IDS.every((missionId) => {
-    const criteria = record[missionId];
-    if (!Array.isArray(criteria)) return false;
-    const canonical = canonicalMissionCriteria({ [missionId]: criteria })[missionId];
-    return criteria.length === canonical.length && criteria.every((criterion, index) => criterion === canonical[index]);
-  }) && Object.keys(record).every((key) => isLearningMissionId(key));
-}
-
 function humanizeIdentifier(value: string): string {
   const words = value.replace(/[_-]+/g, " ").trim();
   return words.length === 0 ? "Missing text" : words[0]!.toUpperCase() + words.slice(1);

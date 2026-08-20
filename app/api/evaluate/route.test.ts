@@ -268,6 +268,47 @@ describe("createEvaluatePost", () => {
     expect(received?.selectedChoice).toBe("school_hub");
   });
 
+  it("signs a regressed partial snapshot so reload restores the revised criteria", async () => {
+    let issued: { criteria: Record<string, readonly string[]> } | undefined;
+    const post = createEvaluatePost({
+      evaluate: async () => validResult,
+      evaluateMission: async () => ({
+        ...validMissionResult,
+        status: "partial",
+        progress: {
+          satisfied: ["housing_goal_clear"],
+          newlySatisfied: [],
+          regressed: ["housing_budget_defined"],
+          missing: ["housing_budget_defined"],
+        },
+      }),
+      progressAuthority: {
+        verify: () => ({
+          completedMissionIds: [],
+          criteria: { apartment_construction: ["housing_goal_clear", "housing_budget_defined"] },
+          choices: { apartment_construction: "balanced_housing" },
+        }),
+        issue: (_safetyIdentifier, progress) => {
+          issued = progress;
+          return "signed.regressed";
+        },
+      },
+    });
+
+    const response = await post(request(JSON.stringify({
+      ...validMissionRequest,
+      progressReceipt: "signed.previous",
+    })));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      status: "partial",
+      progressReceipt: "signed.regressed",
+      progress: { regressed: ["housing_budget_defined"] },
+    });
+    expect(issued?.criteria).toEqual({ apartment_construction: ["housing_goal_clear"] });
+  });
+
   it("sanitizes malformed mission evaluator output", async () => {
     const post = createEvaluatePost({
       evaluate: async () => validResult,

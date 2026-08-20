@@ -1,7 +1,7 @@
 import type { Language } from "../domain/mission-contracts";
 import { uiText } from "./ui-copy";
 
-export type CheckpointGroupId = "complete" | "new" | "pending" | "regressed";
+export type CheckpointGroupId = "complete" | "new" | "pending";
 export type CheckpointGroup = {
   id: CheckpointGroupId;
   title: string;
@@ -33,13 +33,16 @@ export function checkpointGroups(progress: MissionProgress, language: Language):
       title: uiText(language, "checkpoint_pending"),
       criteria: [...progress.missing],
     },
-    {
-      id: "regressed",
-      title: uiText(language, "checkpoint_regressed"),
-      criteria: [...progress.regressed],
-    },
   ];
   return groups.filter((group) => group.criteria.length > 0);
+}
+
+export function regressionNotice(progress: MissionProgress, language: Language): string | null {
+  if (progress.regressed.length === 0) return null;
+  const criteria = progress.regressed.map((criterion) => criterionText(criterion, language)).join(", ");
+  return language === "portuguese"
+    ? `A decisão anterior sobre ${criteria} foi substituída; revise este requisito.`
+    : `The previous decision about ${criteria} was replaced; review this requirement.`;
 }
 
 const criterionCopy: Partial<Record<string, Record<Language, string>>> = {
