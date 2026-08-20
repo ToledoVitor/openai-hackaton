@@ -26,6 +26,12 @@ describe("bilingual interface copy", () => {
     }
   });
 
+  it("localizes every pre-entry sound control", () => {
+    for (const key of ["entry_audio_label", "entry_mute", "entry_unmute", "volume_down", "volume_up", "volume_level"] as const) {
+      expect(uiText("portuguese", key)).not.toBe(uiText("english", key));
+    }
+  });
+
   it("explains independent mission choice without prerequisite language", () => {
     expect(uiText("english", "mission_purpose")).toBe("Why choose this mission");
     expect(uiText("portuguese", "mission_purpose")).toBe("Por que escolher esta missão");

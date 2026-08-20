@@ -2,6 +2,13 @@ import { getStoredLanguage, LANGUAGE_CHANGE_EVENT, setPlayerLanguage } from '../
 import { brandWordmarkMarkup } from '../client/brand-wordmark';
 import { uiText } from '../client/ui-copy';
 import type { Language } from '../domain/mission-contracts';
+import {
+  applyEntryAudioCommand,
+  AUDIO_PREFERENCES_CHANGE_EVENT,
+  entryAudioView,
+  type EntryAudioCommand,
+} from '../audio/entryAudioControls';
+import { entryCityBackdropMarkup } from './entry-presentation';
 
 export type PlayerProfile = { name: string; language: Language };
 
@@ -14,6 +21,14 @@ export function mostrarEntrada() {
     entrada.dataset.etapa = 'inicio';
     entrada.innerHTML = `
       <div class="entrada-luz" aria-hidden="true"></div>
+      ${entryCityBackdropMarkup()}
+      <div class="entrada-som" role="group">
+        <span class="entrada-som__titulo" data-copy="audio"></span>
+        <button type="button" data-audio-command="toggle_mute"><span data-audio-icon aria-hidden="true">♪</span></button>
+        <button type="button" data-audio-command="volume_down" aria-label=""><span aria-hidden="true">−</span></button>
+        <output data-audio-level aria-live="polite"></output>
+        <button type="button" data-audio-command="volume_up" aria-label=""><span aria-hidden="true">+</span></button>
+      </div>
       <div class="entrada-idioma" role="group">
         <span data-copy="language_label"></span>
         <button type="button" data-language="portuguese">Português</button>
@@ -50,6 +65,32 @@ export function mostrarEntrada() {
     const formulario = entrada.querySelector<HTMLFormElement>('.entrada-perfil')!;
     const nome = entrada.querySelector<HTMLInputElement>('#nome-jogador')!;
     const erro = entrada.querySelector<HTMLElement>('.entrada-erro')!;
+    const audioGroup = entrada.querySelector<HTMLElement>('.entrada-som')!;
+    const audioButtons = [...entrada.querySelectorAll<HTMLButtonElement>('[data-audio-command]')];
+    const muteButton = entrada.querySelector<HTMLButtonElement>('[data-audio-command="toggle_mute"]')!;
+    const audioIcon = entrada.querySelector<HTMLElement>('[data-audio-icon]')!;
+    const audioLevel = entrada.querySelector<HTMLOutputElement>('[data-audio-level]')!;
+
+    function renderAudio() {
+      const audio = window.cidadeAudio;
+      audioButtons.forEach((button) => { button.disabled = !audio; });
+      if (!audio) {
+        audioLevel.textContent = '—';
+        return;
+      }
+      const preferences = audio.getPreferences();
+      const view = entryAudioView(language, preferences);
+      audioGroup.setAttribute('aria-label', view.groupLabel);
+      muteButton.setAttribute('aria-label', view.muteLabel);
+      muteButton.setAttribute('aria-pressed', String(preferences.muted));
+      audioIcon.textContent = preferences.muted ? '×' : '♪';
+      const down = entrada.querySelector<HTMLButtonElement>('[data-audio-command="volume_down"]')!;
+      const up = entrada.querySelector<HTMLButtonElement>('[data-audio-command="volume_up"]')!;
+      down.setAttribute('aria-label', view.volumeDownLabel);
+      up.setAttribute('aria-label', view.volumeUpLabel);
+      audioLevel.textContent = view.levelText;
+      audioLevel.setAttribute('aria-label', view.levelLabel);
+    }
 
     function renderLanguage(nextLanguage: Language) {
       language = nextLanguage;
@@ -65,6 +106,7 @@ export function mostrarEntrada() {
         button.setAttribute('aria-pressed', String(selected));
       });
       if (erro.textContent) erro.textContent = uiText(language, 'name_error');
+      renderAudio();
     }
 
     function abrirPerfil() {
@@ -86,6 +128,16 @@ export function mostrarEntrada() {
         renderLanguage(nextLanguage);
       });
     });
+    audioButtons.forEach((button) => {
+      button.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const audio = window.cidadeAudio;
+        if (!audio) return;
+        const preferences = applyEntryAudioCommand(audio, button.dataset.audioCommand as EntryAudioCommand);
+        window.dispatchEvent(new CustomEvent(AUDIO_PREFERENCES_CHANGE_EVENT, { detail: preferences }));
+        renderAudio();
+      });
+    });
     const onLanguageChange = (event: Event) => renderLanguage((event as CustomEvent<Language>).detail);
     window.addEventListener(LANGUAGE_CHANGE_EVENT, onLanguageChange);
     comecar.addEventListener('click', (event) => { event.stopPropagation(); abrirPerfil(); });
@@ -94,7 +146,7 @@ export function mostrarEntrada() {
       if (entrada.dataset.etapa === 'inicio') abrirPerfil();
     });
     entrada.addEventListener('keydown', (evento) => {
-      if ((evento.key === 'Enter' || evento.key === ' ') && entrada.dataset.etapa === 'inicio') {
+      if (evento.target === entrada && (evento.key === 'Enter' || evento.key === ' ') && entrada.dataset.etapa === 'inicio') {
         evento.preventDefault();
         abrirPerfil();
       }
