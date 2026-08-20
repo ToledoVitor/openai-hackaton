@@ -9,6 +9,8 @@ Apache-2.0 covers project source/documentation only. Media retains separate term
 | OpenGameArt audio | `public/audio/music/`, `public/audio/sfx/` | Per-file creator, source URL, hash in `public/audio/SOURCES.md`; CC0 in `public/audio/LICENSE.md` | Cleared under CC0 |
 | AI City logo | `public/assets/brand/ai-city-logo.png` | Added in commit `c16f78d`; no source URL, author declaration, generation record, or license; PNG metadata gives no provenance | **Unresolved release blocker** |
 
+Visual-polish phase reuses KayKit `bench.gltf`, `bush.gltf`, and `streetlight.gltf` through clones. Bus shelters and grass tufts are project-authored runtime geometry/material instances and add no media file or third-party dependency. No external asset was downloaded or generated.
+
 Do not claim logo is Google-generated, project-owned, or distributable: repository contains no evidence for any such claim. Before public source/package release, obtain written license/source record or exclude and replace logo with provenance-cleared artwork. Runtime reference remains for current task; unresolved status does not become permission.
 
 No other image/sprite asset exists under `public/assets` at audit time. Future media PRs must add creator, original URL, license identifier/text, modification notes, and checksum before merge.

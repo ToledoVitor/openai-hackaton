@@ -1,8 +1,8 @@
 # AI City
 
-AI City is a bilingual educational mayor game. Players explore a low-poly Three.js city, learn to write precise civic plans, complete three ordered missions, receive server-authoritative feedback, and see residents and city state respond.
+AI City is a bilingual educational mayor game. Players explore a low-poly Three.js city, choose any of three independent civic-learning missions, receive server-authoritative feedback, and see residents and city state respond.
 
-Journey: language and name → explorable city → housing mission → hospital mission → urban-error repair → feedback and next step.
+Journey: language and name → explorable city → player-chosen housing, hospital, or urban-repair mission → feedback → another mission or continued exploration. Recommendation stays optional and never locks choices.
 
 ## Current release status
 
@@ -40,14 +40,14 @@ npm run build
 ## Architecture
 
 - `app/`: Next-compatible page and server routes. Browser calls server routes only.
-- `src/domain/`: typed mission registry, ordered journey, evaluation rules, NPC dialogue.
+- `src/domain/`: typed mission registry, independent completion set, evaluation rules, NPC dialogue.
 - `src/server/`: OpenAI gateways, timeouts, validation, progress receipts, safe errors.
 - `src/game/main.ts`: lightweight entry bootstrap.
 - `src/game/runtime.ts`: deferred Three.js/game runtime loaded after profile submit.
 - `src/client/`: language, storage, and typed HTTP clients.
 - `tests/offline-openai-guard.ts`: global no-key/no-provider test guard.
 
-Progression is server-authoritative. Realtime is optional and lazy; it cannot grant completion directly.
+Completion is server-authoritative through installation-bound signed receipts. Mission selection is free. Realtime is optional and lazy; it cannot grant completion directly.
 
 ## Contributing
 
@@ -56,6 +56,8 @@ Start with [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), and [
 ## Documentation
 
 - [Sprint architecture and validation](docs/AI_CITY_OVERNIGHT_SPRINT.md)
+- [Free-mission migration plan](docs/plans/2026-08-20-free-mission-choice.md)
+- [Visual, voice, and free-choice review](docs/reviews/2026-08-20-visual-voice-free-choice-review.md)
 - [API contract](docs/API.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Asset attribution audit](ATTRIBUTIONS.md)
