@@ -110,6 +110,7 @@ describe("createEvaluatePost", () => {
     const response = await post(request(body));
 
     expect(response.status).toBe(400);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
     await expect(response.json()).resolves.toEqual({ error: "invalid_request" });
   });
 

@@ -6,6 +6,7 @@ const BASE = '/assets/3d/cidade';
 export class Cidade {
   readonly grupo = new THREE.Group();
   readonly alvosProjeto: THREE.Object3D[] = [];
+  readonly alvosNpc: THREE.Object3D[] = [];
 
   private mixers: THREE.AnimationMixer[] = [];
   private personagens: THREE.Object3D[] = [];
@@ -82,6 +83,7 @@ export class Cidade {
       this.adicionarPersonagem(prefeito, [2.8, 0.18, 4.9], 1.9, 0.12, 'Wave'),
       this.adicionarPersonagem(operario, [4, 0.18, 4.6], 1.82, -0.3, 'Interact'),
     ];
+    this.alvosNpc.push(...this.personagens);
 
     this.construirObra();
     this.construirEscolas(escolaCompacta.scene, escolaPatio.scene);
@@ -110,6 +112,21 @@ export class Cidade {
     if (!this.decisoes.includes(escolha)) this.decisoes.push(escolha);
 
     switch (escolha) {
+      case 'apartment_construction':
+        this.mostrar(this.centroBasico, false);
+        this.mostrar(this.centroCompleto, true);
+        this.mostrar(this.barreiras, false);
+        break;
+      case 'hospital_construction':
+        this.mostrar(this.escolaCompacta, true);
+        this.mostrar(this.escolaPatio, false);
+        break;
+      case 'urban_repair':
+        this.mostrar(this.semaforos, true);
+        this.mostrar(this.lixoProblema, false);
+        this.mostrar(this.coletaOrganizada, true);
+        this.ritmoTransito = 0.72;
+        break;
       case 'escola-compacta':
         this.mostrar(this.escolaCompacta, true);
         this.mostrar(this.escolaPatio, false);

@@ -1,35 +1,28 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { evaluateMissionOnServer, ClientEvaluationError } from '../client/evaluation-client';
+import { getOrCreateInstallationId } from '../client/installation-id';
+import { loadJourneyState, saveJourneyState } from '../client/journey-storage';
+import { getStoredLanguage, LANGUAGE_CHANGE_EVENT } from '../client/language';
+import { uiText } from '../client/ui-copy';
+import {
+  completeLearningMission,
+  createInitialJourneyState,
+  getLearningMission,
+  getMissionAccess,
+  LEARNING_MISSION_IDS,
+  localizeMission,
+  recommendNextMission,
+  selectLearningMission,
+  type JourneyState,
+  type LearningMissionId,
+} from '../domain/learning-journey';
+import type { EvaluateMissionResponse, Language } from '../domain/mission-contracts';
+import { getNpcDialogue, NPC_IDS, type NpcId } from '../domain/npc-dialogue';
 import { Cidade } from './cidade';
-import { mostrarEntrada } from './entrada';
+import { mostrarEntrada, type PlayerProfile } from './entrada';
+import { moveExplorer, movementFromKeys, type ExplorerBounds } from './exploration';
 import { RealtimeVoice } from './realtime';
-type Escolha = {
-  id: string;
-  rotulo: string;
-  resultado: string;
-  satisfacao: number;
-  recursos: number;
-  moradores: number;
-};
-
-type Missao = {
-  titulo: string;
-  personagem: string;
-  pergunta: string;
-  escolhas: [Escolha, Escolha];
-};
-
-const MISSOES: Missao[] = [
-  {
-    titulo: 'A Nova Escola',
-    personagem: 'Prefeito',
-    pergunta: 'Converse com o Prefeito e oriente a construção até a escola atender às crianças do bairro.',
-    escolhas: [
-      { id: 'escola-compacta', rotulo: 'Escola compacta no centro', resultado: 'O prédio aproveita a infraestrutura central e abre vagas rapidamente.', satisfacao: 3, recursos: -420_000, moradores: 120 },
-      { id: 'escola-patio', rotulo: 'Escola com pátio no bairro', resultado: 'O pátio cria espaço para esporte e aproxima a escola das famílias.', satisfacao: 6, recursos: -540_000, moradores: 180 },
-    ],
-  },
-];
 
 const canvas = document.querySelector<HTMLCanvasElement>('#cidade')!;
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -38,20 +31,20 @@ renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.25;
+renderer.toneMappingExposure = 1.2;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 const cena = new THREE.Scene();
-cena.background = new THREE.Color(0x9edbea);
-cena.fog = new THREE.Fog(0x9edbea, 42, 86);
-const camera = new THREE.PerspectiveCamera(38, innerWidth / innerHeight, 0.1, 160);
+cena.background = new THREE.Color(0xa8deec);
+cena.fog = new THREE.Fog(0xa8deec, 48, 94);
+const camera = new THREE.PerspectiveCamera(38, innerWidth / innerHeight, 0.1, 180);
 camera.position.set(24, 18, 29);
 const controles = new OrbitControls(camera, renderer.domElement);
 controles.target.set(0, 1.1, 0);
 controles.enableDamping = true;
 controles.dampingFactor = 0.065;
-controles.minDistance = 11;
-controles.maxDistance = 48;
+controles.minDistance = 9;
+controles.maxDistance = 50;
 controles.minPolarAngle = 0.35;
 controles.maxPolarAngle = Math.PI / 2.08;
 controles.enablePan = true;
@@ -60,101 +53,362 @@ controles.update();
 
 const cidade = new Cidade();
 cena.add(cidade.grupo);
-const voz = new RealtimeVoice();
+const voice = new RealtimeVoice();
+const installationId = getOrCreateInstallationId(window.localStorage, window.crypto);
 
 const ui = {
-  indice: document.querySelector<HTMLElement>('#missao-indice')!,
-  tempo: document.querySelector<HTMLElement>('#tempo-jogo')!,
-  titulo: document.querySelector<HTMLElement>('#missao-titulo')!,
-  personagem: document.querySelector<HTMLElement>('#personagem')!,
-  pergunta: document.querySelector<HTMLElement>('#pergunta')!,
-  escolhas: document.querySelector<HTMLElement>('#escolhas')!,
-  resultado: document.querySelector<HTMLElement>('#resultado')!,
-  resultadoTexto: document.querySelector<HTMLElement>('#resultado-texto')!,
-  impactos: document.querySelector<HTMLElement>('#impactos')!,
-  proximo: document.querySelector<HTMLButtonElement>('#proximo')!,
-  barra: document.querySelector<HTMLElement>('#progresso-barra')!,
-  fase: document.querySelector<HTMLElement>('#fase')!,
-  percentual: document.querySelector<HTMLElement>('#percentual')!,
-  missoesConcluidas: document.querySelector<HTMLElement>('#missoes-concluidas')!,
-  conceitoAtual: document.querySelector<HTMLElement>('#conceito-atual')!,
-  aprendizados: document.querySelector<HTMLElement>('#aprendizados')!,
-  relogio: document.querySelector<HTMLElement>('#relogio')!,
-  aviso: document.querySelector<HTMLElement>('#aviso')!,
-  guiaPrompt: document.querySelector<HTMLElement>('#guia-prompt')!,
-  falaPrefeito: document.querySelector<HTMLElement>('#fala-prefeito')!,
-  promptForm: document.querySelector<HTMLElement>('#prompt-form')!,
-  promptVoz: document.querySelector<HTMLButtonElement>('#prompt-voz')!,
-  promptMutar: document.querySelector<HTMLButtonElement>('#prompt-mutar')!,
+  project: document.querySelector<HTMLElement>('.projeto')!,
+  missionList: document.querySelector<HTMLElement>('#lista-missoes')!,
+  index: document.querySelector<HTMLElement>('#missao-indice')!,
+  missionState: document.querySelector<HTMLElement>('#estado-missao')!,
+  title: document.querySelector<HTMLElement>('#missao-titulo')!,
+  person: document.querySelector<HTMLElement>('#personagem')!,
+  concept: document.querySelector<HTMLElement>('#missao-conceito')!,
+  objective: document.querySelector<HTMLElement>('#missao-objetivo')!,
+  expected: document.querySelector<HTMLElement>('#missao-resultado')!,
+  prerequisite: document.querySelector<HTMLElement>('#missao-prerequisito')!,
+  briefing: document.querySelector<HTMLElement>('#missao-briefing')!,
+  hint: document.querySelector<HTMLElement>('#dica-missao')!,
+  form: document.querySelector<HTMLFormElement>('#prompt-form')!,
+  prompt: document.querySelector<HTMLTextAreaElement>('#prompt-texto')!,
+  submit: document.querySelector<HTMLButtonElement>('#avaliar-plano')!,
+  showHint: document.querySelector<HTMLButtonElement>('#mostrar-dica')!,
+  voice: document.querySelector<HTMLButtonElement>('#prompt-voz')!,
+  voiceHelp: document.querySelector<HTMLElement>('#voz-ajuda')!,
   promptStatus: document.querySelector<HTMLElement>('#prompt-status')!,
-  promptBlueprint: document.querySelector<HTMLElement>('#prompt-blueprint')!,
-  objetivoPrompt: document.querySelector<HTMLElement>('#objetivo-prompt-texto')!,
-  alternarOpcoes: document.querySelector<HTMLButtonElement>('#alternar-opcoes')!,
+  result: document.querySelector<HTMLElement>('#resultado')!,
+  resultTitle: document.querySelector<HTMLElement>('#resultado-titulo')!,
+  resultText: document.querySelector<HTMLElement>('#resultado-texto')!,
+  resultInstruction: document.querySelector<HTMLElement>('#resultado-instrucao')!,
+  next: document.querySelector<HTMLButtonElement>('#proximo')!,
+  bar: document.querySelector<HTMLElement>('#progresso-barra')!,
+  phase: document.querySelector<HTMLElement>('#fase')!,
+  percentage: document.querySelector<HTMLElement>('#percentual')!,
+  complete: document.querySelector<HTMLElement>('#missoes-concluidas')!,
+  recommended: document.querySelector<HTMLElement>('#missao-recomendada')!,
+  day: document.querySelector<HTMLElement>('#dia-cidade')!,
+  budget: document.querySelector<HTMLElement>('#orcamento-cidade')!,
+  health: document.querySelector<HTMLElement>('#bem-estar-cidade')!,
+  npcName: document.querySelector<HTMLElement>('#npc-nome')!,
+  npcLine: document.querySelector<HTMLElement>('#npc-fala')!,
+  npcTabs: document.querySelector<HTMLElement>('#npc-abas')!,
+  loading: document.querySelector<HTMLElement>('#carregando')!,
+  loadingText: document.querySelector<HTMLElement>('#carregando-texto')!,
+  notice: document.querySelector<HTMLElement>('#aviso')!,
+  overview: document.querySelector<HTMLButtonElement>('#visao-geral')!,
+  focus: document.querySelector<HTMLButtonElement>('#focar-missao')!,
 };
 
-let missaoAtual = 0;
-let resolvida = false;
-let finalizado = false;
-let moradores = 8_420;
-let satisfacao = 72;
-let recursos = 2_400_000;
-let segundosJogo = 0;
-let avisoTimer = 0;
-let jogador = '';
-let jogoIniciado = false;
-let tentativasPrompt = 0;
-const historico: Escolha[] = [];
+const labels = {
+  '#estado-titulo': 'city_status', '#rotulo-dia': 'day', '#rotulo-orcamento': 'budget',
+  '#rotulo-bem-estar': 'city_health', '#rotulo-recomendada': 'recommended_next',
+  '#rotulo-conceito': 'mission_concept', '#rotulo-objetivo': 'mission_objective',
+  '#rotulo-resultado': 'expected_outcome', '#rotulo-prerequisito': 'prerequisite',
+  '#rotulo-briefing': 'briefing', '#rotulo-plano': 'your_plan', '#rotulo-feedback': 'feedback',
+  '#rotulo-npc': 'npc_issue', '#ajuda-exploracao': 'explore_help',
+} as const;
 
-function formatarRecursos(valor: number) {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(valor);
+let language: Language = getStoredLanguage(window.localStorage);
+let profile: PlayerProfile = { name: '', language };
+let journey: JourneyState = loadJourneyState(window.localStorage);
+let activeMissionId: LearningMissionId = journey.activeMissionId ?? LEARNING_MISSION_IDS.at(-1)!;
+let selectedNpc: NpcId = 'housing_resident';
+let lastResponse: EvaluateMissionResponse | null = null;
+let evaluating = false;
+let gameStarted = false;
+let noticeTimer = 0;
+let elapsed = 0;
+const attempts = new Map<LearningMissionId, number>();
+const criteria = new Map<LearningMissionId, string[]>();
+const choices = new Map<LearningMissionId, string>();
+
+const explorerBounds: ExplorerBounds = {
+  minX: -35, maxX: 35, minZ: -35, maxZ: 35,
+  obstacles: [
+    { minX: -18, maxX: -10, minZ: 3, maxZ: 12 },
+    { minX: 10, maxX: 18, minZ: -1, maxZ: 7 },
+  ],
+};
+const explorer = new THREE.Vector3(0, 1.1, 0);
+const pressedKeys = new Set<string>();
+
+function missionIndex(missionId = activeMissionId) {
+  return LEARNING_MISSION_IDS.indexOf(missionId);
 }
 
-function atualizarIndicadores() {
-  const concluidas = Math.min(MISSOES.length, missaoAtual + (resolvida ? 1 : 0));
-  const conceitos = ['Prompt'];
-  ui.missoesConcluidas.textContent = `${concluidas} de ${MISSOES.length}`;
-  ui.aprendizados.textContent = `${concluidas} de ${MISSOES.length}`;
-  ui.conceitoAtual.textContent = conceitos[missaoAtual] ?? 'Cidade transformada';
+function updateCityEffects() {
+  for (const missionId of journey.completedMissionIds) cidade.aplicarEscolha(missionId);
 }
 
-function atualizarProgresso(percentual: number, fase: string) {
-  ui.barra.style.width = `${percentual}%`;
-  ui.percentual.textContent = `${percentual}%`;
-  ui.fase.textContent = fase;
+function updateCityState() {
+  const completed = journey.completedMissionIds.length;
+  const spent = [450_000, 780_000, 160_000].slice(0, completed).reduce((sum, value) => sum + value, 0);
+  const budget = 2_400_000 - spent;
+  const locale = language === 'portuguese' ? 'pt-BR' : 'en-US';
+  ui.complete.textContent = `${completed} / ${LEARNING_MISSION_IDS.length}`;
+  ui.day.textContent = String(1 + completed);
+  ui.budget.textContent = new Intl.NumberFormat(locale, { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(budget);
+  ui.health.textContent = `${72 + completed * 8}%`;
+  const recommended = recommendNextMission(journey);
+  ui.recommended.textContent = recommended
+    ? localizeMission(recommended, language).title
+    : uiText(language, 'journey_complete');
 }
 
-function mostrarAviso(texto: string) {
-  ui.aviso.textContent = texto;
-  ui.aviso.classList.add('visivel');
-  window.clearTimeout(avisoTimer);
-  avisoTimer = window.setTimeout(() => ui.aviso.classList.remove('visivel'), 2400);
+function updateProgress() {
+  const completed = journey.completedMissionIds.length;
+  const definition = getLearningMission(activeMissionId);
+  const missionCriteria = criteria.get(activeMissionId) ?? [];
+  const withinMission = getMissionAccess(journey, activeMissionId) === 'completed'
+    ? 1
+    : missionCriteria.length / definition.criteria.length;
+  const percentage = Math.round(((completed + withinMission) / LEARNING_MISSION_IDS.length) * 100);
+  ui.bar.style.width = `${percentage}%`;
+  ui.percentage.textContent = `${percentage}%`;
+  ui.phase.textContent = localizeMission(activeMissionId, language).concept;
 }
 
-function focarMissao(indice = missaoAtual) {
-  const enquadramentos = [
-    { posicao: [8, 10, 21], alvo: [-8, 1.2, 7] },
-    { posicao: [27, 11, 18], alvo: [14, 1, 2] },
-    { posicao: [27, 11, 18], alvo: [14, 1, 2] },
-    { posicao: [8, 12, 22], alvo: [-8, 2, 7] },
+function renderMissionList() {
+  ui.missionList.replaceChildren();
+  LEARNING_MISSION_IDS.forEach((missionId, index) => {
+    const access = getMissionAccess(journey, missionId);
+    const copy = localizeMission(missionId, language);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.missionId = missionId;
+    button.classList.toggle('ativo', missionId === activeMissionId);
+    button.classList.toggle('concluida', access === 'completed');
+    button.disabled = access === 'locked';
+    button.textContent = `${index + 1}. ${copy.title}${access === 'locked' ? ' · 🔒' : access === 'completed' ? ' · ✓' : ''}`;
+    button.title = access === 'locked' ? uiText(language, 'locked') : copy.objective;
+    button.addEventListener('click', () => selectMission(missionId));
+    ui.missionList.append(button);
+  });
+}
+
+function renderNpc(npcId = selectedNpc) {
+  selectedNpc = npcId;
+  const dialogue = getNpcDialogue(npcId, journey, language);
+  ui.npcName.textContent = dialogue.name;
+  ui.npcLine.textContent = dialogue.line;
+  ui.npcTabs.replaceChildren();
+  NPC_IDS.forEach((id, index) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.classList.toggle('ativo', id === npcId);
+    button.setAttribute('aria-label', getNpcDialogue(id, journey, language).name);
+    button.textContent = String(index + 1);
+    button.addEventListener('click', () => renderNpc(id));
+    ui.npcTabs.append(button);
+  });
+}
+
+function renderLanguage() {
+  document.documentElement.lang = language === 'portuguese' ? 'pt-BR' : 'en';
+  Object.entries(labels).forEach(([selector, key]) => {
+    const element = document.querySelector<HTMLElement>(selector);
+    if (element) element.textContent = uiText(language, key);
+  });
+  ui.prompt.placeholder = uiText(language, 'prompt_placeholder');
+  ui.submit.textContent = uiText(language, evaluating ? 'evaluating' : 'submit_plan');
+  ui.showHint.textContent = uiText(language, 'hint');
+  ui.voiceHelp.textContent = uiText(language, 'voice_optional');
+  ui.voice.textContent = uiText(language, voice.isConnected() ? 'stop_voice' : 'start_voice');
+  ui.overview.textContent = uiText(language, 'camera_overview');
+  ui.focus.textContent = uiText(language, 'camera_mission');
+  ui.loadingText.textContent = uiText(language, 'loading_city');
+  renderMission();
+  renderNpc();
+}
+
+function renderMission() {
+  const copy = localizeMission(activeMissionId, language);
+  const definition = getLearningMission(activeMissionId);
+  const access = getMissionAccess(journey, activeMissionId);
+  ui.index.textContent = `${language === 'portuguese' ? 'Missão' : 'Mission'} ${missionIndex() + 1} / ${LEARNING_MISSION_IDS.length}`;
+  ui.missionState.textContent = access === 'completed'
+    ? (language === 'portuguese' ? 'Concluída' : 'Complete')
+    : access === 'locked' ? uiText(language, 'locked') : (language === 'portuguese' ? 'Disponível' : 'Available');
+  ui.title.textContent = copy.title;
+  ui.person.textContent = language === 'portuguese' ? `Prefeito ${profile.name || ''}` : `Mayor ${profile.name || ''}`;
+  ui.concept.textContent = copy.concept;
+  ui.objective.textContent = copy.objective;
+  ui.expected.textContent = copy.expectedOutcome;
+  ui.prerequisite.textContent = definition.prerequisite
+    ? localizeMission(definition.prerequisite, language).title
+    : uiText(language, 'no_prerequisite');
+  ui.briefing.textContent = copy.briefing;
+  ui.hint.textContent = copy.hint;
+  ui.hint.classList.add('oculto');
+  ui.form.classList.toggle('oculto', access !== 'available');
+  ui.result.classList.toggle('oculto', lastResponse === null && access !== 'completed');
+  if (access === 'completed' && !lastResponse) {
+    ui.resultTitle.textContent = copy.feedback;
+    ui.resultText.textContent = copy.expectedOutcome;
+    ui.resultInstruction.textContent = copy.nextStep;
+    ui.next.classList.add('oculto');
+  }
+  renderMissionList();
+  updateCityState();
+  updateProgress();
+  cidade.prepararMissao(missionIndex());
+}
+
+function selectMission(missionId: LearningMissionId) {
+  const selection = selectLearningMission(journey, missionId);
+  if (selection.error) {
+    showNotice(uiText(language, selection.error === 'mission_locked' ? 'locked' : 'error_invalid_request'));
+    return false;
+  }
+  journey = selection.state;
+  activeMissionId = missionId;
+  selectedNpc = NPC_IDS[missionIndex()] ?? NPC_IDS[0];
+  lastResponse = null;
+  ui.prompt.value = '';
+  ui.promptStatus.textContent = '';
+  renderMission();
+  focusMission();
+  return true;
+}
+
+function errorMessage(error: unknown) {
+  if (!(error instanceof ClientEvaluationError)) return uiText(language, 'error_unknown');
+  const keys = {
+    invalid_request: 'error_invalid_request', rate_limited: 'error_rate_limited',
+    provider_unavailable: 'error_provider_unavailable', invalid_response: 'error_invalid_response',
+    network_error: 'error_network', timeout: 'error_timeout',
+  } as const;
+  return uiText(language, keys[error.code]);
+}
+
+async function submitPlan(prompt: string): Promise<EvaluateMissionResponse | { error: string }> {
+  if (evaluating || getMissionAccess(journey, activeMissionId) !== 'available') {
+    return { error: 'mission_unavailable' };
+  }
+  evaluating = true;
+  ui.submit.disabled = true;
+  ui.submit.textContent = uiText(language, 'evaluating');
+  ui.promptStatus.textContent = uiText(language, 'evaluating');
+  const attempt = (attempts.get(activeMissionId) ?? 0) + 1;
+  attempts.set(activeMissionId, attempt);
+
+  try {
+    const definition = getLearningMission(activeMissionId);
+    const response = await evaluateMissionOnServer({
+      missionId: activeMissionId,
+      stepId: definition.stepId,
+      language,
+      prompt,
+      attempt,
+      satisfiedCriteria: criteria.get(activeMissionId) ?? [],
+      ...(choices.has(activeMissionId) ? { selectedChoice: choices.get(activeMissionId)! } : {}),
+      safetyIdentifier: installationId,
+    });
+    lastResponse = response;
+    criteria.set(activeMissionId, response.progress.satisfied);
+    if (response.choice) choices.set(activeMissionId, response.choice);
+    ui.result.classList.remove('oculto');
+    ui.resultTitle.textContent = response.feedback.summary;
+    ui.resultText.textContent = response.feedback.explanation;
+    ui.resultInstruction.textContent = response.feedback.nextInstruction ?? '';
+    ui.promptStatus.textContent = response.feedback.summary;
+    const success = response.status === 'success';
+    ui.next.classList.toggle('oculto', !success);
+    ui.next.textContent = recommendNextMission(journey) === null
+      ? uiText(language, 'journey_complete') : uiText(language, 'next_mission');
+
+    if (success) {
+      const completion = completeLearningMission(journey, activeMissionId, response.status);
+      if (!completion.error) {
+        journey = completion.state;
+        saveJourneyState(window.localStorage, journey);
+        cidade.aplicarEscolha(activeMissionId);
+        ui.resultText.textContent = `${response.feedback.explanation} ${localizeMission(activeMissionId, language).feedback}`;
+        ui.resultInstruction.textContent = localizeMission(activeMissionId, language).nextStep;
+        ui.form.classList.add('oculto');
+        renderMissionList();
+        updateCityState();
+        updateProgress();
+        renderNpc();
+        ui.next.textContent = recommendNextMission(journey) === null
+          ? uiText(language, 'journey_complete') : uiText(language, 'next_mission');
+      }
+    }
+    return response;
+  } catch (error) {
+    const message = errorMessage(error);
+    ui.promptStatus.textContent = message;
+    ui.result.classList.remove('oculto');
+    ui.resultTitle.textContent = uiText(language, 'feedback');
+    ui.resultText.textContent = message;
+    ui.resultInstruction.textContent = uiText(language, 'retry');
+    ui.next.classList.add('oculto');
+    return { error: error instanceof ClientEvaluationError ? error.code : 'unknown' };
+  } finally {
+    evaluating = false;
+    ui.submit.disabled = false;
+    ui.submit.textContent = uiText(language, 'submit_plan');
+  }
+}
+
+function advanceMission() {
+  const next = recommendNextMission(journey);
+  if (next) return selectMission(next);
+  lastResponse = null;
+  ui.next.classList.add('oculto');
+  ui.promptStatus.textContent = uiText(language, 'journey_complete');
+  overview();
+  renderMission();
+  return true;
+}
+
+function resetGame() {
+  journey = createInitialJourneyState();
+  activeMissionId = journey.activeMissionId!;
+  attempts.clear();
+  criteria.clear();
+  choices.clear();
+  lastResponse = null;
+  saveJourneyState(window.localStorage, journey);
+  cidade.reiniciar();
+  renderLanguage();
+  focusMission();
+  return true;
+}
+
+function showNotice(message: string) {
+  ui.notice.textContent = message;
+  ui.notice.classList.add('visivel');
+  window.clearTimeout(noticeTimer);
+  noticeTimer = window.setTimeout(() => ui.notice.classList.remove('visivel'), 2800);
+}
+
+function focusMission() {
+  const frames = [
+    { position: [8, 10, 21], target: [-8, 1.2, 7] },
+    { position: [27, 11, 18], target: [14, 1, 2] },
+    { position: [23, 12, 22], target: [6.6, 1, 0.5] },
   ];
-  const enquadramento = enquadramentos[indice] ?? enquadramentos[0];
-  camera.position.fromArray(enquadramento.posicao);
-  controles.target.fromArray(enquadramento.alvo);
+  const frame = frames[missionIndex()] ?? frames[0]!;
+  camera.position.fromArray(frame.position);
+  controles.target.fromArray(frame.target);
+  explorer.copy(controles.target);
   controles.update();
   cidade.destacar();
-  document.querySelector('#focar-missao')?.classList.add('ativo');
-  document.querySelector('#visao-geral')?.classList.remove('ativo');
+  ui.focus.classList.add('ativo');
+  ui.overview.classList.remove('ativo');
 }
 
-function visaoGeral() {
+function overview() {
   camera.position.set(24, 18, 29);
   controles.target.set(0, 1.1, 0);
+  explorer.copy(controles.target);
   controles.update();
-  document.querySelector('#visao-geral')?.classList.add('ativo');
-  document.querySelector('#focar-missao')?.classList.remove('ativo');
+  ui.overview.classList.add('ativo');
+  ui.focus.classList.remove('ativo');
 }
 
-function focarEntrada() {
+function focusEntry() {
   camera.position.set(10.2, 6.8, 14.65);
   controles.target.set(3.4, 1.25, 4.6);
   controles.enabled = false;
@@ -162,291 +416,145 @@ function focarEntrada() {
   cidade.ocultarDestaque();
 }
 
-function renderizarMissao() {
-  const missao = MISSOES[missaoAtual];
-  const missaoComVoz = true;
-  finalizado = false;
-  resolvida = false;
-  cidade.prepararMissao(missaoAtual);
-  ui.indice.textContent = `Missão ${missaoAtual + 1} de ${MISSOES.length}`;
-  ui.titulo.textContent = missao.titulo;
-  ui.personagem.textContent = missao.personagem;
-  ui.pergunta.textContent = missao.pergunta;
-  atualizarIndicadores();
-  ui.escolhas.replaceChildren();
-  ui.guiaPrompt.classList.toggle('oculto', !missaoComVoz);
-  ui.escolhas.classList.toggle('oculto', missaoComVoz);
-  ui.resultado.classList.add('oculto');
-  atualizarProgresso(Math.round((missaoAtual / MISSOES.length) * 100), missao.titulo);
-
-  if (missaoComVoz) {
-    tentativasPrompt = 0;
-    ui.promptForm.classList.remove('oculto');
-    ui.promptBlueprint.classList.add('oculto');
-    ui.objetivoPrompt.textContent = 'Construa uma escola com um prompt';
-    ui.falaPrefeito.textContent = 'Vamos construir uma escola juntos. Conte o que você imagina e observe como cada detalhe muda o projeto.';
-    ui.promptStatus.textContent = voz.isMuted()
-      ? 'Microfone desligado. Toque em Ativar para falar.'
-      : 'Converse naturalmente; a cidade muda enquanto vocês definem a escola.';
-    sincronizarMute();
-    ui.alternarOpcoes.textContent = 'Prefiro escolher uma opção';
-    document.querySelectorAll<HTMLElement>('[data-prompt-etapa]').forEach((etapa, indice) => etapa.classList.toggle('ativa', indice === 0));
-    document.querySelectorAll<HTMLElement>('[data-blueprint]').forEach((item) => item.classList.remove('presente'));
+ui.form.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const prompt = ui.prompt.value.trim();
+  if (prompt) void submitPlan(prompt);
+});
+ui.showHint.addEventListener('click', () => ui.hint.classList.toggle('oculto'));
+ui.next.addEventListener('click', advanceMission);
+ui.overview.addEventListener('click', overview);
+ui.focus.addEventListener('click', focusMission);
+ui.voice.addEventListener('click', () => {
+  if (voice.isConnected()) {
+    voice.disconnect();
+    ui.voice.textContent = uiText(language, 'start_voice');
+    return;
   }
-
-  const escolhasDisponiveis = missaoComVoz ? [missao.escolhas[1]] : missao.escolhas;
-  for (const escolha of escolhasDisponiveis) {
-    const botao = document.createElement('button');
-    botao.type = 'button';
-    botao.textContent = missaoComVoz ? 'Usar a resposta sugerida' : escolha.rotulo;
-    botao.dataset.escolha = escolha.id;
-    botao.addEventListener('click', () => escolher(escolha.id));
-    ui.escolhas.append(botao);
-  }
-
-  focarMissao();
-}
-
-function marcarEtapaPrompt(indiceAtivo: number) {
-  document.querySelectorAll<HTMLElement>('[data-prompt-etapa]').forEach((etapa, indice) => {
-    etapa.classList.toggle('ativa', indice === indiceAtivo);
-    etapa.classList.toggle('concluida', indice < indiceAtivo);
+  const definition = getLearningMission(activeMissionId);
+  void voice.connect(profile.name, {
+    missionId: activeMissionId,
+    stepId: definition.stepId,
+    language,
+    attempt: (attempts.get(activeMissionId) ?? 0) + 1,
+    satisfiedCriteria: criteria.get(activeMissionId) ?? [],
+    ...(choices.has(activeMissionId) ? { selectedChoice: choices.get(activeMissionId)! } : {}),
+    safetyIdentifier: installationId,
+  }, {
+    onState: (state) => {
+      if (state === 'speaking') window.cidadeAudio?.beginVoice();
+      else window.cidadeAudio?.endVoice();
+      ui.voice.textContent = uiText(language, state === 'closed' || state === 'error' ? 'start_voice' : 'stop_voice');
+      if (state === 'error') ui.promptStatus.textContent = uiText(language, 'error_provider_unavailable');
+    },
+    onMayorText: (text) => { ui.promptStatus.textContent = text; },
+    onPrompt: async (prompt) => {
+      ui.prompt.value = prompt;
+      return submitPlan(prompt);
+    },
   });
-}
-
-function marcarBlueprintCompleto() {
-  ui.promptBlueprint.classList.remove('oculto');
-  document.querySelectorAll<HTMLElement>('[data-blueprint]').forEach((item) => item.classList.add('presente'));
-}
-
-function executarAcaoVoz(nome: string, argumentos: Record<string, unknown>) {
-  if (nome !== 'atualizar_escola' || missaoAtual !== 0) {
-    return { ok: false, motivo: 'ação fora da missão atual' };
-  }
-
-  tentativasPrompt += 1;
-  const completar = argumentos.etapa === 'completa' || tentativasPrompt >= 2;
-  if (!completar) {
-    cidade.aplicarEscolha('escola-compacta');
-    marcarEtapaPrompt(1);
-    atualizarProgresso(12, 'Observando a primeira construção');
-    return {
-      ok: true,
-      visual: 'escola pequena construída',
-      fala: 'Diga que a escola ficou pequena. Na próxima fala do jogador, chame imediatamente atualizar_escola com etapa "completa". Sem perguntas.',
-    };
-  }
-
-  marcarEtapaPrompt(2);
-  marcarBlueprintCompleto();
-  escolher('escola-patio');
-  return {
-    ok: true,
-    visual: 'escola completa construída',
-    missaoConcluida: true,
-    fala: 'Parabenize em uma frase e encerre. Não faça perguntas.',
-  };
-}
-
-function escolher(id: string) {
-  if (resolvida || finalizado) return false;
-  const missao = MISSOES[missaoAtual];
-  const escolha = missao.escolhas.find((item) => item.id === id);
-  if (!escolha) return false;
-
-  resolvida = true;
-  historico.push(escolha);
-  moradores += escolha.moradores;
-  satisfacao = Math.min(100, satisfacao + escolha.satisfacao);
-  recursos += escolha.recursos;
-  cidade.aplicarEscolha(escolha.id);
-  atualizarIndicadores();
-  atualizarProgresso(Math.round(((missaoAtual + 1) / MISSOES.length) * 100), 'Decisão aplicada');
-  ui.escolhas.classList.add('oculto');
-  if (missaoAtual === 0) ui.promptForm.classList.add('oculto');
-  ui.resultado.classList.remove('oculto');
-  ui.resultadoTexto.textContent = escolha.resultado;
-  ui.impactos.replaceChildren(
-    criarImpacto(`+${escolha.satisfacao}% satisfação`),
-    criarImpacto(`${escolha.recursos < 0 ? '−' : '+'} ${formatarRecursos(Math.abs(escolha.recursos))}`),
-  );
-  ui.proximo.textContent = missaoAtual === MISSOES.length - 1 ? 'Ver cidade transformada' : 'Próxima missão';
-  mostrarAviso('A cidade mudou com a sua decisão');
-  focarMissao();
-  return true;
-}
-
-function criarImpacto(texto: string) {
-  const impacto = document.createElement('span');
-  impacto.textContent = texto;
-  return impacto;
-}
-
-function avancarMissao() {
-  if (!resolvida || finalizado) return false;
-  if (missaoAtual < MISSOES.length - 1) {
-    missaoAtual += 1;
-    renderizarMissao();
-  } else {
-    renderizarFinal();
-  }
-  return true;
-}
-
-function renderizarFinal() {
-  finalizado = true;
-  resolvida = false;
-  ui.indice.textContent = 'Cidade transformada';
-  ui.titulo.textContent = 'Uma cidade que aprende';
-  ui.personagem.textContent = 'Resultado da gestão';
-  ui.pergunta.textContent = 'A escola abriu, o bairro evoluiu e cada escolha deixou uma marca visível na cidade.';
-  ui.escolhas.classList.add('oculto');
-  ui.guiaPrompt.classList.add('oculto');
-  ui.resultado.classList.remove('oculto');
-  ui.resultadoTexto.textContent = historico.map((item) => item.rotulo).join(' · ');
-  ui.impactos.replaceChildren(
-    criarImpacto(`${new Intl.NumberFormat('pt-BR').format(moradores)} moradores`),
-    criarImpacto(`${satisfacao}% de satisfação`),
-  );
-  ui.proximo.textContent = 'Jogar novamente';
-  atualizarProgresso(100, 'Escola concluída');
-  visaoGeral();
-}
-
-function reiniciarJogo() {
-  missaoAtual = 0;
-  resolvida = false;
-  finalizado = false;
-  moradores = 8_420;
-  satisfacao = 72;
-  recursos = 2_400_000;
-  segundosJogo = 0;
-  historico.splice(0);
-  cidade.reiniciar();
-  atualizarIndicadores();
-  renderizarMissao();
-  voz.startMission(0);
-}
-
-ui.proximo.addEventListener('click', () => finalizado ? reiniciarJogo() : avancarMissao());
-ui.alternarOpcoes.addEventListener('click', () => {
-  const vaiMostrar = ui.escolhas.classList.contains('oculto');
-  ui.escolhas.classList.toggle('oculto', !vaiMostrar);
-  ui.alternarOpcoes.textContent = vaiMostrar ? 'Continuar falando com o Prefeito' : 'Prefiro escolher uma opção';
 });
-function sincronizarMute(mutado = voz.isMuted()) {
-  ui.promptMutar.setAttribute('aria-pressed', String(mutado));
-  ui.promptMutar.setAttribute('aria-label', mutado ? 'Ativar microfone' : 'Desativar microfone');
-  ui.promptMutar.classList.toggle('mutado', mutado);
-  ui.promptMutar.querySelector('b')!.textContent = mutado ? 'Ativar' : 'Mutar';
-  ui.promptStatus.textContent = mutado
-    ? 'Microfone desligado. Toque em Ativar para falar.'
-    : 'Pode falar; a cidade muda enquanto vocês definem a escola.';
-}
 
-function audioCidade() {
-  return window.cidadeAudio;
-}
-
-let vozAtiva = false;
-function marcarVoz(ativa: boolean) {
-  if (ativa === vozAtiva) return;
-  vozAtiva = ativa;
-  if (ativa) audioCidade()?.beginVoice();
-  else audioCidade()?.endVoice();
-}
-
-ui.promptMutar.addEventListener('click', () => {
-  sincronizarMute(voz.toggleMute());
+window.addEventListener(LANGUAGE_CHANGE_EVENT, (event) => {
+  language = (event as CustomEvent<Language>).detail;
+  profile.language = language;
+  lastResponse = null;
+  ui.promptStatus.textContent = '';
+  voice.disconnect(false);
+  renderLanguage();
 });
-ui.promptVoz.addEventListener('click', () => {
-  const pausada = voz.togglePause();
-  ui.promptVoz.classList.toggle('pausada', pausada);
-  ui.promptVoz.querySelector('b')!.textContent = pausada ? 'Continuar conversa' : 'Pausar conversa';
+
+window.addEventListener('keydown', (event) => {
+  if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+  if (['w', 'a', 's', 'd', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
+    pressedKeys.add(event.key);
+    event.preventDefault();
+  }
 });
-document.querySelector('#visao-geral')!.addEventListener('click', visaoGeral);
-document.querySelector('#focar-missao')!.addEventListener('click', () => focarMissao());
+window.addEventListener('keyup', (event) => pressedKeys.delete(event.key));
 
 const raycaster = new THREE.Raycaster();
-const ponteiro = new THREE.Vector2();
-function sobreProjeto(evento: PointerEvent) {
-  ponteiro.x = (evento.clientX / innerWidth) * 2 - 1;
-  ponteiro.y = -(evento.clientY / innerHeight) * 2 + 1;
-  raycaster.setFromCamera(ponteiro, camera);
-  return raycaster.intersectObjects(cidade.alvosProjeto, true).length > 0;
-}
-canvas.addEventListener('pointermove', (evento) => { canvas.style.cursor = sobreProjeto(evento) ? 'pointer' : 'grab'; });
-canvas.addEventListener('click', (evento) => { if (sobreProjeto(evento)) focarMissao(); });
+const pointer = new THREE.Vector2();
+const ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+canvas.addEventListener('click', (event) => {
+  pointer.x = (event.clientX / innerWidth) * 2 - 1;
+  pointer.y = -(event.clientY / innerHeight) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+  if (raycaster.intersectObjects(cidade.alvosNpc, true).length > 0) {
+    renderNpc(NPC_IDS[missionIndex()] ?? NPC_IDS[0]);
+    return;
+  }
+  if (raycaster.intersectObjects(cidade.alvosProjeto, true).length > 0) {
+    focusMission();
+    return;
+  }
+  const target = new THREE.Vector3();
+  if (raycaster.ray.intersectPlane(ground, target)) {
+    const delta = { x: target.x - explorer.x, z: target.z - explorer.z };
+    const distance = Math.hypot(delta.x, delta.z);
+    if (distance > 0) {
+      const next = moveExplorer(explorer, { x: delta.x / distance, z: delta.z / distance }, distance, explorerBounds);
+      explorer.set(next.x, 1.1, next.z);
+    }
+  }
+});
 
-addEventListener('resize', () => {
+window.addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  ui.project.scrollTop = 0;
 });
 
-let minutosCidade = 9 * 60;
-let ultimoSegundo = -1;
 const clock = new THREE.Clock();
-function animar() {
-  requestAnimationFrame(animar);
+function animate() {
+  requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.05);
   cidade.atualizar(dt);
-  controles.update();
-  if (jogoIniciado) segundosJogo += dt;
-  minutosCidade += dt * 2.2;
-  const segundo = Math.floor(segundosJogo);
-  if (segundo !== ultimoSegundo) {
-    ultimoSegundo = segundo;
-    ui.tempo.textContent = `${String(Math.floor(segundo / 60)).padStart(2, '0')}:${String(segundo % 60).padStart(2, '0')}`;
-    const horas = Math.floor(minutosCidade / 60) % 24;
-    const minutos = Math.floor(minutosCidade % 60);
-    ui.relogio.textContent = `Dia 1 · ${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}`;
+  if (gameStarted) elapsed += dt;
+  const movement = movementFromKeys(pressedKeys);
+  if (movement.x !== 0 || movement.z !== 0) {
+    const next = moveExplorer(explorer, movement, dt * 9, explorerBounds);
+    explorer.set(next.x, 1.1, next.z);
   }
+  if (gameStarted && (pressedKeys.size > 0 || controles.target.distanceTo(explorer) > 0.02)) {
+    controles.target.lerp(explorer, Math.min(1, dt * 7));
+  }
+  controles.update();
   renderer.render(cena, camera);
 }
 
-async function iniciar() {
+async function start() {
+  renderLanguage();
   try {
     await cidade.construir();
-    atualizarIndicadores();
-    focarEntrada();
-    document.querySelector('#carregando')!.classList.add('oculto');
-    animar();
-    jogador = await mostrarEntrada();
-    jogoIniciado = true;
+    updateCityEffects();
+    focusEntry();
+    ui.loading.classList.add('oculto');
+    animate();
+    profile = await mostrarEntrada();
+    language = profile.language;
+    gameStarted = true;
     controles.enabled = true;
-    controles.enableRotate = true;
-    controles.enableZoom = true;
-    controles.enablePan = true;
-    renderizarMissao();
-    sincronizarMute();
-    void voz.connect(jogador, {
-      onState: (estado) => {
-        document.querySelector('.fala-prefeito')?.classList.toggle('falando', estado === 'speaking');
-        marcarVoz(estado === 'speaking');
-        if (estado === 'connecting') ui.promptVoz.querySelector('b')!.textContent = 'Conectando conversa';
-        if (estado === 'listening' || estado === 'speaking') ui.promptVoz.querySelector('b')!.textContent = 'Pausar conversa';
-        if (estado === 'paused') ui.promptVoz.querySelector('b')!.textContent = 'Continuar conversa';
-        if (estado === 'error') ui.promptVoz.querySelector('b')!.textContent = 'Iniciar conversa';
-      },
-      onMayorText: (texto) => { ui.falaPrefeito.textContent = texto; },
-      onAction: executarAcaoVoz,
-    });
-  } catch (erro) {
-    document.querySelector('#carregando')!.textContent = 'Não foi possível carregar a cidade.';
-    console.error(erro);
+    renderLanguage();
+    focusMission();
+  } catch {
+    ui.loadingText.textContent = uiText(language, 'loading_error');
+    ui.loading.classList.add('erro');
   }
 }
 
 (window as unknown as { cidadeViva: unknown }).cidadeViva = {
-  estado: () => ({ jogador, missao: missaoAtual + 1, resolvida, finalizado, moradores, satisfacao, recursos, ...cidade.estado() }),
-  escolher,
-  acaoVoz: executarAcaoVoz,
-  avancarMissao,
-  reiniciar: reiniciarJogo,
-  focarMissao,
-  visaoGeral,
+  estado: () => ({
+    profile: { name: profile.name, language }, journey, activeMissionId, elapsed,
+    explorer: { x: explorer.x, z: explorer.z }, ...cidade.estado(),
+  }),
+  escolher: (id: LearningMissionId) => selectMission(id),
+  avancarMissao: advanceMission,
+  reiniciar: resetGame,
+  focarMissao: focusMission,
+  visaoGeral: overview,
 };
 
-void iniciar();
+void start();

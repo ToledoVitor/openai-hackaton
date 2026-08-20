@@ -34,10 +34,10 @@ type EvaluateMission = (request: EvaluateMissionRequest) => Promise<EvaluateMiss
 
 const EVALUATION_BODY_LIMIT_BYTES = 16 * 1024;
 
-function json(body: unknown, status: number, cacheControl?: string): Response {
+function json(body: unknown, status: number, cacheControl = "no-store"): Response {
   return Response.json(body, {
     status,
-    headers: cacheControl ? { "Cache-Control": cacheControl } : undefined,
+    headers: { "Cache-Control": cacheControl, Pragma: "no-cache" },
   });
 }
 
