@@ -7,6 +7,7 @@ import {
 import {
   evaluateMissionRequestSchema,
   evaluateMissionResponseSchema,
+  MISSION_PATHS,
   MISSION_STEPS,
   type EvaluateMissionRequest,
   type EvaluateMissionResponse,
@@ -16,8 +17,8 @@ import {
 import {
   canonicalCompletedMissionIds,
   isLearningMissionId,
-  type LearningMissionId,
 } from "../../../src/domain/learning-journey";
+import { canonicalMissionCriteria } from "../../../src/domain/missions/progress-snapshot";
 import { EvaluationError, ModerationUnavailableError } from "../../../src/server/evaluation/errors";
 import {
   evaluateMissionPrompt,
@@ -31,7 +32,11 @@ import {
 import {
   readJsonWithLimit,
 } from "../../../src/server/guardrails";
-import { createProgressAuthority, type ProgressAuthority } from "../../../src/server/progress/progress-receipt";
+import {
+  createProgressAuthority,
+  type ProgressAuthority,
+  type VerifiedProgress,
+} from "../../../src/server/progress/progress-receipt";
 
 export const runtime = "nodejs";
 
@@ -114,24 +119,28 @@ export function createEvaluatePost(dependencies: {
       if (!parsed.success) return json(invalidMissionRequest(body), 400);
       if (!dependencies.evaluateMission) return json(missionError("internal_error"), 503);
 
-      let completedMissionIds: LearningMissionId[] = [];
-      if (isLearningMissionId(parsed.data.missionId)) {
-        if (parsed.data.progressReceipt) {
-          const verified = dependencies.progressAuthority?.verify(
-            parsed.data.progressReceipt,
-            parsed.data.safetyIdentifier,
-          );
-          if (!verified) return json(missionError("invalid_progress"), 400);
-          completedMissionIds = verified.completedMissionIds;
-        }
+      let verifiedProgress: VerifiedProgress = {
+        completedMissionIds: [],
+        criteria: {},
+        choices: {},
+      };
+      if (parsed.data.progressReceipt) {
+        const verified = dependencies.progressAuthority?.verify(
+          parsed.data.progressReceipt,
+          parsed.data.safetyIdentifier,
+        );
+        if (!verified) return json(missionError("invalid_progress"), 400);
+        verifiedProgress = verified;
       }
 
       try {
         const authoritativeRequest: EvaluateMissionRequest = {
           ...parsed.data,
-          satisfiedCriteria: [],
+          satisfiedCriteria: [...(verifiedProgress.criteria[parsed.data.missionId] ?? [])],
         };
-        delete authoritativeRequest.selectedChoice;
+        const verifiedChoice = verifiedProgress.choices[parsed.data.missionId];
+        if (verifiedChoice) authoritativeRequest.selectedChoice = verifiedChoice;
+        else delete authoritativeRequest.selectedChoice;
         const evaluated = await dependencies.evaluateMission(authoritativeRequest);
         if (
           evaluated.missionId !== parsed.data.missionId ||
@@ -140,12 +149,34 @@ export function createEvaluatePost(dependencies: {
         ) {
           return json(missionError("internal_error"), 500);
         }
-        const withProgress = evaluated.status === "success" && isLearningMissionId(evaluated.missionId)
+        const acceptedProgress = evaluated.status === "partial" || evaluated.status === "success";
+        const nextCriteria = acceptedProgress
+          ? canonicalMissionCriteria({
+              ...verifiedProgress.criteria,
+              [evaluated.missionId]: evaluated.progress.satisfied,
+            })
+          : verifiedProgress.criteria;
+        const nextChoices = { ...verifiedProgress.choices };
+        if (acceptedProgress) {
+          if (evaluated.choice && MISSION_PATHS[evaluated.missionId].includes(evaluated.choice)) {
+            nextChoices[evaluated.missionId] = evaluated.choice;
+          } else {
+            delete nextChoices[evaluated.missionId];
+          }
+        }
+        const nextProgress: VerifiedProgress = {
+          completedMissionIds: evaluated.status === "success" && isLearningMissionId(evaluated.missionId)
+            ? canonicalCompletedMissionIds([...verifiedProgress.completedMissionIds, evaluated.missionId])
+            : verifiedProgress.completedMissionIds,
+          criteria: nextCriteria,
+          choices: nextChoices,
+        };
+        const withProgress = acceptedProgress && dependencies.progressAuthority
           ? {
               ...evaluated,
-              progressReceipt: dependencies.progressAuthority?.issue(
+              progressReceipt: dependencies.progressAuthority.issue(
                 parsed.data.safetyIdentifier,
-                canonicalCompletedMissionIds([...completedMissionIds, evaluated.missionId]),
+                nextProgress,
               ),
             }
           : evaluated;

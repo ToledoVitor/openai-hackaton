@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { REQUIRED_UI_KEYS, UI_COPY, uiText } from "./ui-copy";
+import { localizeMission } from "../domain/learning-journey";
 
 describe("bilingual interface copy", () => {
   it.each(["portuguese", "english"] as const)("covers primary, loading, empty, and error states in %s", (language) => {
@@ -37,5 +38,12 @@ describe("bilingual interface copy", () => {
     expect(uiText("portuguese", "mission_purpose")).toBe("Por que escolher esta missão");
     expect(REQUIRED_UI_KEYS).not.toContain("locked");
     expect(REQUIRED_UI_KEYS).not.toContain("prerequisite");
+  });
+
+  it("labels incremental checkpoint groups and the independent school in both languages", () => {
+    expect(uiText("portuguese", "checkpoint_new")).toBe("Corrigido agora");
+    expect(uiText("portuguese", "checkpoint_pending")).toBe("Ainda falta");
+    expect(uiText("english", "checkpoint_pending")).toBe("Still needed");
+    expect(localizeMission("school_construction", "english").title).toContain("School");
   });
 });

@@ -6,6 +6,8 @@ describe("verified progress client", () => {
   it("loads strict server-verified progress through same-origin route", async () => {
     const fetcher = vi.fn(async () => Response.json({
       completedMissionIds: ["apartment_construction"],
+      criteria: { school_construction: ["school_scale_defined", "school_accessible"] },
+      choices: { school_construction: "school_hub" },
       progressReceipt: "signed.receipt",
     }));
 
@@ -14,6 +16,8 @@ describe("verified progress client", () => {
       progressReceipt: "signed.receipt",
     }, { fetcher })).resolves.toEqual({
       completedMissionIds: ["apartment_construction"],
+      criteria: { school_construction: ["school_scale_defined", "school_accessible"] },
+      choices: { school_construction: "school_hub" },
       progressReceipt: "signed.receipt",
     });
     expect(fetcher).toHaveBeenCalledWith("/api/progress", expect.objectContaining({ method: "POST" }));

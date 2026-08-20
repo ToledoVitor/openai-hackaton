@@ -1,7 +1,7 @@
 import type { Language } from "./mission-contracts";
 import type { JourneyState, LearningMissionId } from "./learning-journey";
 
-export const NPC_IDS = ["housing_resident", "hospital_nurse", "urban_guardian"] as const;
+export const NPC_IDS = ["housing_resident", "hospital_nurse", "urban_guardian", "school_principal"] as const;
 export type NpcId = (typeof NPC_IDS)[number];
 
 type NpcDefinition = {
@@ -48,12 +48,25 @@ const NPCS: Record<NpcId, NpcDefinition> = {
       english: "The crossing is safer, collection resumed, and the team monitors results.",
     },
   },
+  school_principal: {
+    relatedMissionId: "school_construction",
+    name: { portuguese: "Maya · diretora", english: "Maya · principal" },
+    unsolved: {
+      portuguese: "As famílias precisam de uma escola pública segura, acessível e perto de casa.",
+      english: "Families need a safe, accessible public school close to home.",
+    },
+    improved: {
+      portuguese: "A nova escola recebe estudantes com acesso seguro e espaço para aprender.",
+      english: "The new school welcomes students with safe access and room to learn.",
+    },
+  },
 };
 
 const NPC_BY_MISSION: Readonly<Record<LearningMissionId, NpcId>> = {
   apartment_construction: "housing_resident",
   hospital_construction: "hospital_nurse",
   urban_repair: "urban_guardian",
+  school_construction: "school_principal",
 };
 
 export function getNpcForMission(missionId: LearningMissionId): NpcId {

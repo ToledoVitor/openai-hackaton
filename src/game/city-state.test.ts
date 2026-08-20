@@ -11,5 +11,6 @@ describe("city state for independent missions", () => {
       health: 80,
     });
     expect(deriveCityState(["urban_repair", "apartment_construction"]).budget).toBe(1_790_000);
+    expect(deriveCityState(["school_construction"]).budget).toBe(1_790_000);
   });
 });

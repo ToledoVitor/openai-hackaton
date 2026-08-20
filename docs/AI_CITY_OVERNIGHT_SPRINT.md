@@ -4,8 +4,8 @@
 
 Player journey now follows entry → persisted language choice → explorable city → freely selected learning mission → server feedback → another mission or exploration.
 
-- `src/domain/learning-journey.ts` is source of truth for typed independent missions: apartment construction, hospital construction, and diagnosis/correction of existing urban errors. Each mission owns pedagogical purpose, concept, objective, expected outcome, briefing, hint, completion feedback, next step, criteria, step, and allowed path.
-- `src/client/journey-storage.ts` persists display state plus an opaque server receipt. `/api/progress` verifies its HMAC and installation binding before reload applies completion, city effects, or NPC improvement. Local active-mission choice is display-only.
+- `src/domain/learning-journey.ts` is source of truth for typed independent missions: apartment construction, hospital construction, diagnosis/correction of existing urban errors, and school construction. Each mission owns pedagogical purpose, concept, objective, expected outcome, briefing, hint, completion feedback, next step, criteria, step, and allowed path.
+- `src/client/journey-storage.ts` persists display state plus an opaque server receipt. `/api/progress` verifies its HMAC and installation binding before reload applies completion, checkpoint criteria, city effects, or NPC improvement. Local active-mission choice is display-only.
 - `src/game/main.ts` is a 4.2 KB raw entry bootstrap. It awaits name/language submission before importing `src/game/runtime.ts`, which owns Three.js and game orchestration. Runtime never computes a progression-critical score. Only a schema-valid server response with `status: "success"` reaches `completeLearningMission`.
 - `src/domain/npc-dialogue.ts` supplies deterministic bilingual resident lines tied to canonical completion state. No NPC call uses an LLM.
 - `src/game/exploration.ts` owns testable boundary and simple collision logic. Main scene maps WASD/arrows and ground click/touch to camera-target exploration.
@@ -16,7 +16,7 @@ Player journey now follows entry → persisted language choice → explorable ci
 - Browser submits a strict `EvaluateMissionRequest` only to `/api/evaluate`. Server validates request, applies body limits, moderation/extraction timeouts through OpenAI clients, and validates its own response before serialization.
 - Browser-claimed prior criteria and selected paths are discarded at the server boundary. Only current server-side extraction may determine success.
 - Provider structured-extraction failure is fail-closed. Deterministic fallback may diagnose prompt content, but always returns retry with `evaluation_unavailable_no_change`; it cannot approve progression.
-- Learning success includes a server-signed, installation-bound canonical completion-set receipt. `/api/evaluate` accepts any valid learning mission, verifies any supplied receipt, unions successful mission ID without duplicates, canonicalizes set order, and rejects results not bound to requested mission, step, and language.
+- Valid `partial` and `success` learning evaluations include a server-signed, installation-bound canonical progress receipt. `/api/evaluate` accepts any valid learning mission, restores only a supplied verified mission snapshot, applies additions/regressions from the current revision, unions successful mission IDs without duplicates, and rejects results not bound to requested mission, step, and language.
 - Worker applies per-IP quotas to paid POST routes only when trusted Cloudflare metadata exists. Local requests deliberately avoid a shared anonymous limiter.
 - Every evaluation response, including errors, uses `Cache-Control: no-store` and `Pragma: no-cache`. Browser maps status classes to fixed translated messages and discards provider bodies.
 - Permanent `OPENAI_API_KEY` is read only in server route modules. No `NEXT_PUBLIC_` secret exists. Client bundle scan found no permanent key name, key pattern, or bearer project credential.
@@ -33,7 +33,7 @@ Vitest loads `tests/offline-openai-guard.ts` before every suite. Guard deletes `
 
 - Existing logo, audio, sprites, GLTF models, and textures remain intact. Building positions/rotations now create varied streets; passive blocks use green ground plus shared CC0 bench/bush/streetlight clones and procedural instanced grass/bus shelters; mission zones remain visually clear.
 - Existing camera framing remains mission focus. Exploration adds bounded direct movement without physics.
-- UI uses one primary evaluation action, compact city state, three always-available mission choices, visible pedagogical purpose, resident reports, clear feedback, optional text/voice input, and responsive scroll containment.
+- UI uses one primary evaluation action, compact city state, four always-available mission choices, visible pedagogical purpose, resident reports, localized checkpoint groups, clear feedback, optional text/voice input, and responsive scroll containment.
 - Language changes immediately, persists across reload, closes an active voice session, and clears stale feedback so one screen never mixes response languages.
 - `window.cidadeViva` retains `estado`, `escolher`, `avancarMissao`, `reiniciar`, `focarMissao`, and `visaoGeral` for scene validation.
 

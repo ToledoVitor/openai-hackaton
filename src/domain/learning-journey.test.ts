@@ -5,11 +5,13 @@ import {
   completeLearningMission,
   createInitialJourneyState,
   getMissionAccess,
+  isLearningMissionId,
   localizeMission,
   parseJourneyState,
   recommendNextMission,
   selectLearningMission,
 } from "./learning-journey";
+import { canonicalMissionCriteria } from "./missions/progress-snapshot";
 
 describe("learning journey", () => {
   it("centralizes complete bilingual teaching metadata for independent missions", () => {
@@ -17,6 +19,7 @@ describe("learning journey", () => {
       "apartment_construction",
       "hospital_construction",
       "urban_repair",
+      "school_construction",
     ]);
     for (const mission of LEARNING_MISSIONS) {
       for (const language of ["portuguese", "english"] as const) {
@@ -26,6 +29,27 @@ describe("learning journey", () => {
         expect(copy.purpose).not.toBe(copy.objective);
       }
     }
+  });
+
+  it("offers school construction independently from the first visit", () => {
+    const initial = createInitialJourneyState();
+
+    expect(isLearningMissionId("school_construction")).toBe(true);
+    expect(getMissionAccess(initial, "school_construction")).toBe("available");
+    expect(selectLearningMission(initial, "school_construction")).toEqual({
+      state: { ...initial, activeMissionId: "school_construction" },
+      error: null,
+    });
+  });
+
+  it("canonicalizes each mission snapshot to its own declared criteria", () => {
+    expect(canonicalMissionCriteria({
+      school_construction: ["school_accessible", "invented", "school_scale_defined"],
+      apartment_construction: ["school_accessible", "housing_budget_defined"],
+    })).toMatchObject({
+      school_construction: ["school_scale_defined", "school_accessible"],
+      apartment_construction: ["housing_budget_defined"],
+    });
   });
 
   it("returns a human-readable fallback for an unknown translation field", () => {
@@ -39,7 +63,7 @@ describe("learning journey", () => {
     expect(initial.activeMissionId).toBeNull();
     expect(recommendNextMission(initial)).toBe("apartment_construction");
     expect(LEARNING_MISSIONS.map(({ id }) => getMissionAccess(initial, id))).toEqual([
-      "available", "available", "available",
+      "available", "available", "available", "available",
     ]);
 
     const partial = completeLearningMission(initial, "hospital_construction", "partial");

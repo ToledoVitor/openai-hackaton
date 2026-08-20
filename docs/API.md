@@ -4,9 +4,9 @@ Server reads `OPENAI_API_KEY` only from environment. Optional `OPENAI_REALTIME_M
 
 ## Independent learning progress
 
-Housing, hospital, and urban-repair missions are independently selectable. `/api/evaluate` accepts any valid mission/step pair without prerequisite completion. Browser-supplied criteria and choices are hints only and are removed at server boundary before authoritative evaluation.
+Housing, hospital, urban-repair, and school missions are independently selectable. `/api/evaluate` accepts any valid mission/step pair without prerequisite completion. Browser-supplied criteria and choices are discarded at the server boundary; only a verified receipt snapshot for that installation can seed an authoritative revision.
 
-Successful learning evaluation returns opaque `progressReceipt`. Receipt payload is HMAC-signed, bound to `safetyIdentifier`, contains unique completed mission IDs in canonical registry order, and never contains prompts or provider data. Send latest receipt on later evaluation and `/api/progress` calls. Server verifies receipt, unions successful mission ID, and signs updated set. Invalid/tampered receipts fail with `400 invalid_progress`; no completion changes. Replaying older valid receipt can only restore its signed subset and cannot forge another mission.
+Every valid `partial` or `success` learning evaluation returns opaque `progressReceipt`. Receipt payload is HMAC-signed, bound to `safetyIdentifier`, contains unique completed mission IDs plus canonical criterion IDs and valid path choices by mission, and never contains prompts or provider data. Send latest receipt on later evaluation and `/api/progress` calls. Server verifies receipt, replaces the affected mission snapshot after a valid revision, unions successful mission ID, and signs the updated snapshot. Invalid/tampered receipts fail with `400 invalid_progress`; no progress changes. Replaying an older valid receipt can only restore its signed subset and cannot forge another mission.
 
 ## Evaluate mission
 
@@ -40,6 +40,7 @@ Success body:
   "progress": {
     "satisfied": ["school_goal_clear", "school_branch_selected"],
     "newlySatisfied": ["school_branch_selected"],
+    "regressed": [],
     "missing": ["school_context_clear", "school_scale_defined", "school_accessible", "school_branch_feature_defined"]
   },
   "teachingConcept": "Objetivo, contexto, escala e restrições",

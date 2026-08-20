@@ -6,6 +6,8 @@ describe("progress contract", () => {
   it("accepts independent mission completions in canonical registry order", () => {
     expect(progressResponseSchema.safeParse({
       completedMissionIds: ["apartment_construction", "urban_repair"],
+      criteria: { school_construction: ["school_scale_defined", "school_accessible"] },
+      choices: { school_construction: "school_hub" },
     }).success).toBe(true);
     expect(progressResponseSchema.safeParse({
       completedMissionIds: ["urban_repair", "apartment_construction"],

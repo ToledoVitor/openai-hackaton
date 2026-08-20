@@ -5,21 +5,23 @@ import { NPC_IDS, getNpcDialogue, getNpcForMission } from "./npc-dialogue";
 
 describe("deterministic city NPC dialogue", () => {
   it("links one NPC to each learning mission", () => {
-    expect(NPC_IDS).toEqual(["housing_resident", "hospital_nurse", "urban_guardian"]);
+    expect(NPC_IDS).toEqual(["housing_resident", "hospital_nurse", "urban_guardian", "school_principal"]);
     expect(getNpcForMission("apartment_construction")).toBe("housing_resident");
     expect(getNpcForMission("hospital_construction")).toBe("hospital_nurse");
     expect(getNpcForMission("urban_repair")).toBe("urban_guardian");
+    expect(getNpcForMission("school_construction")).toBe("school_principal");
   });
 
   it.each([
     ["housing_resident", "apartment_construction"],
     ["hospital_nurse", "hospital_construction"],
     ["urban_guardian", "urban_repair"],
+    ["school_principal", "school_construction"],
   ] as const)("reports %s issue until %s is complete, then acknowledges improvement", (npcId, missionId) => {
     const before = getNpcDialogue(npcId, createInitialJourneyState(), "english");
     const after = getNpcDialogue(npcId, {
       ...createInitialJourneyState(),
-      completedMissionIds: ["apartment_construction", "hospital_construction", "urban_repair"],
+      completedMissionIds: ["apartment_construction", "hospital_construction", "urban_repair", "school_construction"],
     }, "english");
 
     expect(before.state).toBe("unsolved");
@@ -45,5 +47,6 @@ describe("deterministic city NPC dialogue", () => {
     expect(getNpcDialogue("hospital_nurse", state, "english").state).toBe("improved");
     expect(getNpcDialogue("housing_resident", state, "english").state).toBe("unsolved");
     expect(getNpcDialogue("urban_guardian", state, "english").state).toBe("unsolved");
+    expect(getNpcDialogue("school_principal", state, "english").state).toBe("unsolved");
   });
 });

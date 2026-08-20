@@ -22,7 +22,7 @@ const GameUi = memo(function GameUi() {
       <aside className="estado-cidade" aria-labelledby="estado-titulo">
         <div className="estado-cabecalho">
           <span id="estado-titulo" />
-          <strong id="missoes-concluidas">0 / 3</strong>
+          <strong id="missoes-concluidas">0 / 4</strong>
         </div>
         <dl>
           <div><dt id="rotulo-dia" /><dd id="dia-cidade">1</dd></div>
@@ -67,6 +67,9 @@ const GameUi = memo(function GameUi() {
           <span id="fase" />
           <strong id="percentual">0%</strong>
         </div>
+
+        <section className="checkpoints" id="checkpoints" aria-live="polite" />
+        <p className="revisao-missao" id="regression-notice" role="status" aria-live="polite" hidden />
 
         <form className="compositor-prompt" id="prompt-form">
           <label htmlFor="prompt-texto" id="rotulo-plano" />

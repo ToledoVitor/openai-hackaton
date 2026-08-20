@@ -95,7 +95,7 @@ export function evaluateMission(input: {
       source: input.source,
       status: "redirected",
       choice: resolvedChoice,
-      progress: { satisfied: [...satisfied], newlySatisfied: [], missing: [...missing] },
+      progress: { satisfied: [...satisfied], newlySatisfied: [], regressed: [], missing: [...missing] },
       teachingConcept: definition.teachingConcept[input.request.language],
       feedback: createFeedback({
         language: input.request.language,
@@ -109,8 +109,11 @@ export function evaluateMission(input: {
     };
   }
 
-  const candidate = new Set<string>();
-  for (const criterion of definition.criteriaByStep[input.request.stepId] ?? []) {
+  const evaluatedCriteria = definition.criteriaByStep[input.request.stepId] ?? [];
+  const candidate = new Set<string>(
+    definition.criteria.filter((criterion) => !evaluatedCriteria.includes(criterion) && previous.has(criterion)),
+  );
+  for (const criterion of evaluatedCriteria) {
     if (input.extraction.criteria[criterion]?.met) candidate.add(criterion);
   }
 
@@ -124,11 +127,14 @@ export function evaluateMission(input: {
   const branchCriterion = definition.choiceCriterion;
   if (resolvedChoice === null) {
     candidate.delete(branchCriterion);
-    for (const criterion of definition.choiceDependentCriteria ?? []) {
-      candidate.delete(criterion);
-    }
   } else {
     candidate.add(branchCriterion);
+  }
+
+  for (const [criterion, invalidated] of Object.entries(definition.invalidatedWhenMissing ?? {})) {
+    if (!candidate.has(criterion)) {
+      for (const dependent of invalidated) candidate.delete(dependent);
+    }
   }
 
   if (input.request.missionId === "city_school") {
@@ -148,25 +154,26 @@ export function evaluateMission(input: {
   const newlySatisfied = definition.criteria.filter(
     (criterion) => candidate.has(criterion) && !previous.has(criterion),
   );
-  for (const criterion of newlySatisfied) previous.add(criterion);
-
   if (
     input.request.missionId === "city_school" &&
     input.temperatureTrial?.status === "generated" &&
-    previous.has("creative_temperature_tested") &&
-    previous.has("critical_temperature_tested") &&
-    previous.has("expected_behavior_explained")
+    candidate.has("creative_temperature_tested") &&
+    candidate.has("critical_temperature_tested") &&
+    candidate.has("expected_behavior_explained")
   ) {
-    if (!previous.has("temperature_comparison_complete")) {
-      previous.add("temperature_comparison_complete");
+    if (!candidate.has("temperature_comparison_complete")) {
+      candidate.add("temperature_comparison_complete");
       newlySatisfied.push("temperature_comparison_complete");
     }
   }
 
-  const satisfied = definition.criteria.filter((criterion) => previous.has(criterion));
-  const missing = definition.criteria.filter((criterion) => !previous.has(criterion));
+  const regressed = definition.criteria.filter(
+    (criterion) => previous.has(criterion) && !candidate.has(criterion),
+  );
+  const satisfied = definition.criteria.filter((criterion) => candidate.has(criterion));
+  const missing = definition.criteria.filter((criterion) => !candidate.has(criterion));
   const status: EvaluateMissionResponse["status"] =
-    missing.length === 0 ? "success" : newlySatisfied.length === 0 ? "retry" : "partial";
+    missing.length === 0 ? "success" : newlySatisfied.length === 0 && regressed.length === 0 ? "retry" : "partial";
   const effectKeys = effectsFor({
     request: input.request,
     extraction: { ...input.extraction, choice: resolvedChoice },
@@ -185,6 +192,7 @@ export function evaluateMission(input: {
     progress: {
       satisfied: [...satisfied],
       newlySatisfied,
+      regressed,
       missing: [...missing],
     },
     teachingConcept: definition.teachingConcept[input.request.language],

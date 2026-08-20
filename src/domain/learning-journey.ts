@@ -2,6 +2,7 @@ export const LEARNING_MISSION_IDS = [
   "apartment_construction",
   "hospital_construction",
   "urban_repair",
+  "school_construction",
 ] as const;
 
 export type LearningMissionId = (typeof LEARNING_MISSION_IDS)[number];
@@ -21,7 +22,7 @@ export type LocalizedMissionMetadata = {
 
 export type LearningMissionDefinition = {
   id: LearningMissionId;
-  stepId: "plan" | "prioritize" | "diagnose";
+  stepId: "design" | "plan" | "prioritize" | "diagnose";
   paths: readonly string[];
   criteria: readonly string[];
   copy: Readonly<Record<LearningLanguage, LocalizedMissionMetadata>>;
@@ -136,6 +137,44 @@ export const LEARNING_MISSIONS = [
         hint: "Name both problems, choose priority, explain causes, order actions, and include a final check.",
         feedback: "Diagnosis complete; urban corrections applied and verified.",
         nextStep: "Review what you learned and keep exploring the transformed city.",
+      },
+    },
+  },
+  {
+    id: "school_construction",
+    stepId: "design",
+    paths: ["school_hub", "school_greenway"],
+    criteria: [
+      "school_goal_clear",
+      "school_public_defined",
+      "school_location_defined",
+      "school_scale_defined",
+      "school_accessible",
+      "school_safety_defined",
+      "school_site_selected",
+    ],
+    copy: {
+      portuguese: {
+        title: "Escola aberta para o bairro",
+        purpose: "Praticar requisitos públicos claros para uma escola segura, acessível e bem implantada.",
+        concept: "Objetivo público, escala, acesso, segurança e implantação",
+        objective: "Projetar uma escola pública que atenda estudantes e famílias com acesso seguro.",
+        expectedOutcome: "Uma escola dimensionada, acessível, segura e posicionada no local escolhido.",
+        briefing: "O bairro precisa de uma escola independente. Defina quem ela atende, onde ficará, a escala, entrada acessível, segurança e a implantação.",
+        hint: "Diga público, local, salas ou capacidade, porta acessível, segurança e escolha entre polo escolar ou corredor verde.",
+        feedback: "Projeto escolar aprovado com requisitos públicos e implantação verificáveis.",
+        nextStep: "Continue escolhendo missões livres para melhorar a cidade.",
+      },
+      english: {
+        title: "Neighborhood School, open to all",
+        purpose: "Practice clear public requirements for a safe, accessible, well-sited school.",
+        concept: "Public goal, scale, access, safety, and site choice",
+        objective: "Design a public school that serves students and families with safe access.",
+        expectedOutcome: "A properly sized, accessible, safe school at the selected site.",
+        briefing: "The neighborhood needs an independent school. Define who it serves, its location, scale, accessible entrance, safety, and site choice.",
+        hint: "Name the public, location, classrooms or capacity, accessible door, safety, and choose the school hub or greenway site.",
+        feedback: "School project approved with verifiable public requirements and site choice.",
+        nextStep: "Keep choosing free missions to improve the city.",
       },
     },
   },

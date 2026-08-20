@@ -1,8 +1,8 @@
 # AI City
 
-AI City is a bilingual educational mayor game. Players explore a low-poly Three.js city, choose any of three independent civic-learning missions, receive server-authoritative feedback, and see residents and city state respond.
+AI City is a bilingual educational mayor game. Players explore a low-poly Three.js city, choose any of four independent civic-learning missions, receive server-authoritative incremental feedback, and see residents and city state respond.
 
-Journey: language and name → explorable city → player-chosen housing, hospital, or urban-repair mission → feedback → another mission or continued exploration. Recommendation stays optional and never locks choices.
+Journey: language and name → explorable city → player-chosen housing, hospital, urban-repair, or school mission → checkpoint feedback → another mission or continued exploration. Recommendation stays optional and never locks choices.
 
 ## Current release status
 
@@ -47,7 +47,7 @@ npm run build
 - `src/client/`: language, storage, and typed HTTP clients.
 - `tests/offline-openai-guard.ts`: global no-key/no-provider test guard.
 
-Completion is server-authoritative through installation-bound signed receipts. Mission selection is free. Realtime is optional and lazy; it cannot grant completion directly.
+Completion and incremental criteria are server-authoritative through installation-bound signed receipts. Checkpoints show newly satisfied, retained, pending, and revised requirements; browser storage holds only display state plus opaque receipt. Mission selection is free. Realtime is optional and lazy; it cannot grant completion directly.
 
 ## Contributing
 

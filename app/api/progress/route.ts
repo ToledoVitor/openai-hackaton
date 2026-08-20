@@ -24,12 +24,14 @@ export function createProgressPost(authority: Pick<ProgressAuthority, "verify">)
     }
     const parsed = progressRequestSchema.safeParse(body);
     if (!parsed.success) return json({ error: "invalid_request" }, 400);
-    if (!parsed.data.progressReceipt) return json({ completedMissionIds: [] }, 200);
+    if (!parsed.data.progressReceipt) {
+      return json({ completedMissionIds: [], criteria: {}, choices: {} }, 200);
+    }
 
     const verified = authority.verify(parsed.data.progressReceipt, parsed.data.safetyIdentifier);
     const response = verified
       ? { ...verified, progressReceipt: parsed.data.progressReceipt }
-      : { completedMissionIds: [] };
+      : { completedMissionIds: [], criteria: {}, choices: {} };
     return json(progressResponseSchema.parse(response), 200);
   };
 }

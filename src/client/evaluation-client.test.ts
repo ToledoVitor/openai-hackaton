@@ -23,6 +23,7 @@ const result: EvaluateMissionResponse = {
   progress: {
     satisfied: ["housing_goal_clear"],
     newlySatisfied: ["housing_goal_clear"],
+    regressed: [],
     missing: ["housing_budget_defined"],
   },
   teachingConcept: "Goals and constraints",
@@ -32,6 +33,7 @@ const result: EvaluateMissionResponse = {
     nextInstruction: "Add a budget.",
   },
   effectKeys: ["housing_plan_incomplete"],
+  progressReceipt: "signed.partial-progress",
 };
 
 describe("evaluateMissionOnServer", () => {
@@ -78,9 +80,18 @@ describe("evaluateMissionOnServer", () => {
   it("rejects learning mission success without a server progress receipt", async () => {
     const fetcher = async () => Response.json({
       ...result,
+      progressReceipt: undefined,
       status: "success",
       effectKeys: ["housing_complete"],
     });
+
+    await expect(evaluateMissionOnServer(request, { fetcher })).rejects.toMatchObject({
+      code: "invalid_response",
+    });
+  });
+
+  it("rejects partial progress without a server progress receipt", async () => {
+    const fetcher = async () => Response.json({ ...result, progressReceipt: undefined });
 
     await expect(evaluateMissionOnServer(request, { fetcher })).rejects.toMatchObject({
       code: "invalid_response",
