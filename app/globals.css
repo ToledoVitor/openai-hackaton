@@ -103,6 +103,10 @@ button { font: inherit; }
 .carregando { position: fixed; z-index: 5; inset: 0; display: flex; justify-content: center; align-items: center; gap: 10px; color: #315d62; background: #9edbea; font-size: 13px; transition: opacity .45s; }
 .carregando span { width: 18px; height: 18px; border: 2px solid rgba(24,63,69,.2); border-top-color: #168d82; border-radius: 50%; animation: girar .8s linear infinite; }
 .carregando.oculto { opacity: 0; pointer-events: none; }
+.carregando.erro { flex-direction: column; text-align: center; }
+.carregando.erro span { display: none; }
+.carregando.erro button { padding: 10px 16px; border: 0; border-radius: 12px; color: #fff; background: #126f68; cursor: pointer; font-weight: 850; }
+.carregando.erro button:focus-visible { outline: 3px solid #f2c84b; outline-offset: 3px; }
 .aviso { position: fixed; z-index: 4; left: 50%; top: 108px; padding: 11px 18px; border-radius: 99px; color: white; background: #183f45; box-shadow: 0 12px 32px rgba(24,63,69,.22); font-size: 12px; font-weight: 700; opacity: 0; transform: translate(-50%, -10px); transition: .25s; pointer-events: none; }
 .aviso.visivel { opacity: 1; transform: translate(-50%, 0); }
 @keyframes girar { to { transform: rotate(360deg); } }
@@ -116,6 +120,208 @@ button { font: inherit; }
   .projeto p { min-height: 0; }
   .camera { right: 14px; bottom: 320px; }
   .ajuda { display: none; }
+}
+
+/* Connected learning journey */
+.barra-superior {
+  min-height: 64px;
+  overflow: visible;
+  gap: 18px;
+  padding: 8px 14px;
+}
+
+.brand-wordmark {
+  display: inline-flex;
+  position: relative;
+  isolation: isolate;
+  align-items: flex-end;
+  color: #f4bd45;
+  font-size: 44px;
+  font-weight: 950;
+  line-height: .78;
+  letter-spacing: -.08em;
+  filter: drop-shadow(0 .18em .14em rgba(56, 43, 25, .2));
+  user-select: none;
+}
+
+.brand-wordmark__ai {
+  position: relative;
+  z-index: 2;
+  margin-right: -.3em;
+  padding: .22em .25em .18em;
+  border: .06em solid rgba(255, 255, 255, .7);
+  border-radius: .42em .42em .34em .34em;
+  color: #fffdf7;
+  background: linear-gradient(145deg, #25a99a, #126f68);
+  box-shadow: 0 .08em 0 #0b5753, 0 .14em .2em rgba(24, 73, 68, .24);
+  font-size: .36em;
+  letter-spacing: -.03em;
+  line-height: 1;
+  transform: translateY(-1.35em) rotate(-6deg);
+}
+
+.brand-wordmark__city {
+  color: #f6c956;
+  -webkit-text-stroke: .055em #5c3c20;
+  paint-order: stroke fill;
+  text-shadow: 0 .075em 0 #d98c2c, 0 .135em 0 #70451f, 0 .19em .24em rgba(59, 42, 21, .28);
+}
+
+.brand-wordmark--header {
+  flex: 0 0 auto;
+  margin: 0 8px 0 4px;
+  font-size: 43px;
+}
+.seletor-idioma { display: flex; gap: 4px; margin-left: auto; padding: 4px; border-radius: 12px; background: #e7f1ed; }
+.seletor-idioma button,
+.entrada-idioma button {
+  min-height: 40px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 9px;
+  color: #315d62;
+  background: transparent;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 850;
+}
+.seletor-idioma button[aria-pressed="true"],
+.entrada-idioma button.ativo { color: #fff; background: #126f68; }
+
+.estado-cidade,
+.npc-painel {
+  position: fixed;
+  z-index: 3;
+  right: 24px;
+  width: min(310px, calc(100vw - 48px));
+  padding: 15px;
+  border: 2px solid rgba(255,255,255,.82);
+  border-radius: 22px;
+  background: rgba(255,253,247,.94);
+  box-shadow: 0 22px 60px rgba(20,71,69,.18);
+  backdrop-filter: blur(20px);
+}
+.estado-cidade { top: 106px; }
+.estado-cabecalho { display: flex; align-items: center; justify-content: space-between; }
+.estado-cabecalho span,
+.proxima-recomendada span,
+.npc-painel > span {
+  color: #5d797d;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.estado-cabecalho strong { color: #126f68; font-size: 13px; }
+.estado-cidade dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 11px 0; }
+.estado-cidade dl div { padding: 8px; border-radius: 11px; background: #edf5f1; }
+.estado-cidade dt { color: #617b80; font-size: 8px; font-weight: 750; }
+.estado-cidade dd { margin: 3px 0 0; color: #183f45; font-size: 11px; font-weight: 900; }
+.proxima-recomendada { display: grid; gap: 3px; padding-top: 10px; border-top: 1px solid #d6e8e3; }
+.proxima-recomendada strong { font-size: 12px; }
+
+.npc-painel { top: 285px; }
+.npc-painel strong { display: block; margin: 7px 0 4px; color: #126f68; font-size: 12px; }
+.npc-painel p { min-height: 0; margin: 0; color: #405f64; font-size: 11px; line-height: 1.45; }
+.npc-abas { display: flex; gap: 5px; margin-top: 10px; }
+.npc-abas button { width: 28px; height: 28px; border: 1px solid #c7ddd7; border-radius: 50%; color: #315d62; background: #edf5f1; cursor: pointer; font-size: 9px; font-weight: 900; }
+.npc-abas button.ativo { color: #fff; border-color: #126f68; background: #126f68; }
+
+.projeto {
+  top: 106px;
+  bottom: auto;
+  width: min(430px, calc(100vw - 48px));
+  max-height: min(780px, calc(100vh - 130px));
+  overflow-y: auto;
+  padding: 18px;
+  border-radius: 24px;
+  scrollbar-width: thin;
+}
+.lista-missoes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; margin-bottom: 14px; }
+.escolha-missao { padding: 18px 4px 8px; }
+.escolha-missao h1 { max-width: 330px; margin: 10px 0 8px; }
+.projeto .escolha-missao p { max-width: 340px; min-height: 0; margin: 0; }
+.projeto .lista-missoes button { min-height: 46px; padding: 7px; border: 1px solid #d6e8e3; border-radius: 10px; color: #526f73; background: #f5faf8; box-shadow: none; font-size: 8px; line-height: 1.25; }
+.projeto .lista-missoes button.ativo { color: #fff; border-color: #126f68; background: #126f68; }
+.projeto .lista-missoes button.concluida:not(.ativo) { color: #126f68; background: #e0f2eb; }
+.projeto .lista-missoes button:disabled { color: #7d8d8f; background: #edf0ef; cursor: not-allowed; opacity: .75; }
+.estado-missao { max-width: 58%; color: #5f7478; font-size: 9px; font-weight: 800; text-align: right; }
+.projeto h1 { margin: 9px 0 2px; font-size: 27px; }
+.projeto .personagem { min-height: 0; margin: 0 0 12px; color: #126f68; }
+.missao-resumo { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.missao-resumo > div { padding: 9px; border: 1px solid #d8e7e3; border-radius: 11px; background: #f7fbf9; }
+.missao-resumo span,
+.briefing > span,
+.resultado > span { display: block; margin-bottom: 3px; color: #647f83; font-size: 8px; font-weight: 900; letter-spacing: .7px; text-transform: uppercase; }
+.missao-resumo strong { color: #183f45; font-size: 11px; line-height: 1.3; }
+.projeto .missao-resumo p { min-height: 0; margin: 0; color: #48676b; font-size: 10px; line-height: 1.35; }
+.briefing { margin: 8px 0 11px; padding: 10px 11px; border-left: 4px solid #d3a52e; border-radius: 9px; background: #fff7d9; }
+.projeto .briefing p { min-height: 0; margin: 0; color: #594a20; font-size: 11px; line-height: 1.4; }
+.compositor-prompt { gap: 8px; margin-top: 13px; }
+.compositor-prompt textarea { height: 92px; max-height: 150px; font-size: 12px; }
+.acoes-prompt { display: grid; grid-template-columns: 1fr auto; gap: 7px; }
+.projeto .acao-principal,
+.projeto .acao-secundaria { min-height: 43px; padding: 10px 13px; }
+.projeto .acao-principal { color: #fff; background: linear-gradient(135deg, #168d82, #0f6b65); }
+.projeto .acao-secundaria { color: #315d62; border: 1px solid #c7ddd7; background: #edf5f1; box-shadow: none; }
+.projeto .acoes-prompt .acao-secundaria { width: auto; }
+.projeto .dica-missao { min-height: 0; margin: 0; padding: 9px; border-radius: 9px; color: #5b4b20; background: #fff7d9; font-size: 10px; }
+.voz-opcional { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 9px; border: 1px solid #d6e8e3; border-radius: 12px; background: #f7fbf9; }
+.projeto .voz-opcional button { width: auto; min-height: 44px; font-size: 9px; }
+.voz-meta { min-width: 0; }
+.voz-meta strong, .voz-meta small { display: block; }
+.voz-meta strong { color: #244f54; font-size: 9px; line-height: 1.3; }
+.voz-meta small { margin-top: 2px; color: #667f83; font-size: 8px; line-height: 1.25; }
+.projeto .voz-opcional .acao-texto { min-height: 36px; padding: 7px 9px; color: #315d62; border: 0; background: transparent; box-shadow: none; text-decoration: underline; }
+.projeto #prompt-voz[data-state="listening"] { color: #fff; background: #126f68; }
+.projeto #prompt-voz[data-state="speaking"] { color: #183f45; background: #ffd566; }
+.projeto #prompt-status { min-height: 18px; margin: 0; color: #405f64; font-size: 10px; }
+.resultado { margin-top: 11px; padding: 12px; border: 1px solid #bcd9d1; border-radius: 13px; background: #edf8f4; }
+.resultado h2 { margin: 0 0 5px; color: #183f45; font-size: 15px; }
+.projeto .resultado p { min-height: 0; margin: 0 0 7px; font-size: 10px; }
+.ajuda-exploracao { position: fixed; z-index: 2; right: 24px; bottom: 84px; max-width: 310px; margin: 0; padding: 8px 11px; border-radius: 10px; color: #315d62; background: rgba(255,253,247,.84); font-size: 9px; font-weight: 750; }
+.camera button.ativo { color: #fff; background: #126f68; }
+
+.entrada-idioma { position: absolute; z-index: 4; top: 22px; right: 24px; display: flex; align-items: center; gap: 4px; padding: 5px; border: 1px solid rgba(255,255,255,.7); border-radius: 13px; color: #315d62; background: rgba(255,253,247,.88); backdrop-filter: blur(14px); }
+.entrada-idioma > span { padding: 0 5px; font-size: 9px; font-weight: 900; text-transform: uppercase; }
+.entrada-ativa .estado-cidade,
+.entrada-ativa .npc-painel,
+.entrada-ativa .ajuda-exploracao { opacity: 0; pointer-events: none; }
+
+button:focus-visible,
+textarea:focus-visible,
+input:focus-visible { outline: 3px solid #f2c84b !important; outline-offset: 3px; }
+button:disabled { transform: none !important; }
+
+@media (max-width: 760px) {
+  .barra-superior { gap: 7px; }
+  .seletor-idioma button { min-height: 44px; padding: 6px; font-size: 8px; }
+  .audio-toggle { min-width: 44px; min-height: 44px; justify-content: center; }
+  .audio-toggle { font-size: 0; }
+  .audio-toggle span { font-size: 11px; }
+  .audio-painel { top: 72px; right: 10px; }
+  .estado-cidade { top: 78px; left: 10px; right: 10px; width: auto; padding: 10px; border-radius: 16px; }
+  .estado-cidade dl { margin: 7px 0; }
+  .estado-cidade dl div { padding: 5px; }
+  .proxima-recomendada { grid-template-columns: auto 1fr; align-items: center; gap: 8px; padding-top: 6px; }
+  .npc-painel { top: 202px; left: 10px; right: 10px; width: auto; padding: 9px 11px; border-radius: 16px; }
+  .npc-painel p { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+  .npc-abas { position: absolute; right: 9px; top: 5px; margin: 0; }
+  .projeto { top: auto; left: 10px; bottom: 10px; width: calc(100vw - 20px); max-height: 57vh; padding: 14px; border-radius: 20px; }
+  .missao-resumo { grid-template-columns: 1fr 1fr; }
+  .ajuda-exploracao { display: none; }
+  .camera { right: 10px; bottom: calc(57vh + 12px); padding: 2px; border-width: 1px; border-radius: 14px; }
+  .camera button { min-height: 44px; padding: 8px 9px; font-size: 9px; }
+  .voz-opcional { grid-template-columns: 1fr auto; }
+  .voz-meta { grid-column: 1 / -1; grid-row: 2; }
+  .entrada-idioma { top: 10px; right: 10px; }
+  .entrada-idioma > span { display: none; }
+}
+
+@media (max-height: 720px) and (max-width: 760px) {
+  .npc-painel { display: none; }
+  .projeto { max-height: 56vh; }
+  .camera { bottom: calc(56vh + 10px); }
 }
 
 .entrada {
@@ -194,22 +400,19 @@ button { font: inherit; }
   white-space: nowrap;
 }
 
-.entrada-logo {
+.brand-wordmark--hero {
   position: absolute;
-  top: -42px;
+  top: clamp(58px, 8vh, 88px);
   left: 50%;
-  width: min(530px, 64vw);
-  max-height: 47vh;
-  object-fit: contain;
-  filter: drop-shadow(0 24px 18px rgba(59, 43, 19, .24));
+  font-size: clamp(96px, 12vw, 146px);
   transform: translateX(-50%);
-  animation: logo-flutuar 3.8s ease-in-out infinite;
+  animation: wordmark-flutuar 3.8s ease-in-out infinite;
 }
 
 .entrada-convite {
   position: absolute;
   z-index: 2;
-  bottom: clamp(32px, 6vh, 62px);
+  bottom: clamp(40px, 7vh, 72px);
   left: 50%;
   display: grid;
   justify-items: center;
@@ -259,9 +462,9 @@ button { font: inherit; }
   transition: opacity .4s ease .1s, transform .55s cubic-bezier(.2,.8,.2,1) .05s;
 }
 
-.entrada-logo-menor {
-  width: min(590px, 52vw);
-  filter: drop-shadow(0 22px 18px rgba(59, 43, 19, .22));
+.brand-wordmark--profile {
+  justify-self: center;
+  font-size: clamp(88px, 10vw, 128px);
 }
 
 .entrada-cartao {
@@ -327,19 +530,22 @@ button { font: inherit; }
 .entrada-ativa .projeto,
 .entrada-ativa .camera,
 .entrada-ativa .ajuda,
-.entrada-ativa .aviso { opacity: 0; pointer-events: none; }
+.entrada-ativa .aviso,
+.entrada-ativa .carregando { opacity: 0; pointer-events: none; }
 .entrada-ativa #cidade { cursor: default; filter: saturate(1.12) brightness(1.04); transform: scale(1.015); }
 
 @keyframes entrada-aparecer { from { opacity: 0; } }
-@keyframes logo-flutuar { 50% { transform: translate(-50%, -7px) rotate(-.3deg); } }
+@keyframes wordmark-flutuar { 50% { transform: translate(-50%, -7px) rotate(-.3deg); } }
 
 @media (max-width: 760px) {
   .entrada-inicio { padding: 0 14px; }
   .entrada-chamada { top: 31vh; font-size: 9px; letter-spacing: 1.1px; }
-  .entrada-logo { top: -16px; width: min(520px, 92vw); max-height: 43vh; }
+  .brand-wordmark--hero { top: clamp(58px, 9vh, 80px); font-size: clamp(78px, 25vw, 104px); }
+  .entrada-convite { bottom: clamp(42px, 7vh, 68px); width: calc(100% - 28px); }
+  .entrada-comecar { min-width: min(300px, 86vw); }
   .entrada-convite p { max-width: 300px; }
   .entrada-perfil { grid-template-columns: 1fr; align-content: center; gap: 4px; width: min(430px, calc(100% - 24px)); }
-  .entrada-logo-menor { width: min(340px, 82vw); margin: 0 auto -18px; }
+  .brand-wordmark--profile { margin: 0 auto 28px; font-size: clamp(72px, 23vw, 94px); }
   .entrada-cartao { padding: 24px 20px 20px; border-radius: 24px; }
   .entrada-cartao h1 { font-size: 28px; }
   .entrada-versao { right: 50%; transform: translateX(50%); white-space: nowrap; }
@@ -351,14 +557,6 @@ button { font: inherit; }
 
 /* Guia conversacional da primeira missão */
 .marca { min-width: 148px; }
-.marca-logo {
-  display: block;
-  width: 126px;
-  height: 52px;
-  object-fit: contain;
-  object-position: left center;
-}
-
 .barra-superior {
   overflow: hidden;
 }
@@ -732,7 +930,7 @@ button { font: inherit; }
 }
 
 @media (max-width: 760px) {
-  .marca-logo { width: 82px; height: 39px; }
+  .brand-wordmark--header { margin-right: 0; font-size: 34px; }
   .indicadores div { min-width: 88px; }
   .indicadores div:nth-child(2), .indicadores div:nth-child(3) { display: none; }
   .audio-toggle { padding: 7px 9px; font-size: 10px; }
@@ -743,4 +941,22 @@ button { font: inherit; }
     width: calc(100vw - 20px);
     max-height: calc(100vh - 80px);
   }
+}
+
+/* Final specificity: current shell follows legacy conversational styles above. */
+.barra-superior { overflow: visible; }
+.barra-superior,
+.projeto,
+.estado-cidade,
+.npc-painel,
+.camera { backdrop-filter: none; }
+.compositor-prompt textarea { height: 92px; min-height: 92px; max-height: 150px; font-size: 12px; }
+.projeto .acao-principal,
+.projeto .acao-secundaria { min-height: 43px; padding: 10px 13px; }
+.projeto .acao-secundaria { color: #315d62; border: 1px solid #c7ddd7; background: #edf5f1; box-shadow: none; }
+
+@media (max-width: 760px) {
+  .audio-toggle { font-size: 0; }
+  .audio-toggle span { font-size: 11px; }
+  .audio-painel { top: 72px; right: 10px; }
 }

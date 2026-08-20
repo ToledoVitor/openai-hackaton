@@ -4,5 +4,6 @@ export default defineConfig({
   test: {
     environment: "node",
     restoreMocks: true,
+    setupFiles: ["./tests/offline-openai-guard.ts"],
   },
 });

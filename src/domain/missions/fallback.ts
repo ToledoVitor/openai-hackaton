@@ -100,6 +100,45 @@ export function fallbackMissionExtraction(request: EvaluateMissionRequest): Miss
     if (containsAny(text, words(["alunos", "espaco", "capacidade", "seguranca"], ["students", "space", "capacity", "safety"]))) met.add("project_constraints_defined");
   }
 
+  if (request.missionId === "apartment_construction") {
+    if (containsAny(text, words(["apartamento", "moradia"], ["apartment", "housing"]))) {
+      choice = "balanced_housing";
+      met.add("housing_goal_clear");
+    }
+    if (containsAny(text, words(["familia", "moradores", "vizinhança"], ["families", "residents", "neighborhood"]))) met.add("housing_residents_defined");
+    if (/\b\d+\b/.test(text) && containsAny(text, words(["apartamento", "unidade"], ["apartment", "unit"]))) met.add("housing_capacity_defined");
+    if (containsAny(text, words(["orcamento", "milhao", "r$"], ["budget", "million", "$"]))) met.add("housing_budget_defined");
+    if (containsAny(text, words(["acessivel", "cadeira de rodas", "sem degrau"], ["accessible", "wheelchair", "step-free"]))) met.add("housing_accessibility_defined");
+    if (containsAny(text, words(["area verde", "patio verde", "jardim"], ["green courtyard", "green space", "garden"]))) met.add("housing_green_space_defined");
+  }
+
+  if (request.missionId === "hospital_construction") {
+    if (containsAny(text, words(["hospital"], ["hospital"]))) {
+      choice = "emergency_ready";
+      met.add("hospital_goal_clear");
+    }
+    if (containsAny(text, words(["priorize", "pronto atendimento", "emergencia"], ["prioritize", "emergency", "urgent care"]))) met.add("hospital_service_priority_defined");
+    if (containsAny(text, words(["ambulancia", "acesso de emergencia"], ["ambulance", "emergency access"]))) met.add("hospital_emergency_access_defined");
+    if (/\b\d+\b/.test(text) && containsAny(text, words(["leito", "capacidade"], ["bed", "capacity"]))) met.add("hospital_capacity_defined");
+    if (containsAny(text, words(["rota segura", "rotas seguras", "seguranca", "controle de infeccao"], ["safe route", "safety", "infection control"]))) met.add("hospital_safety_constraints_defined");
+    if (/\b\d+\b/.test(text) && containsAny(text, words(["meta", "minuto", "medir"], ["target", "minute", "measure"]))) met.add("hospital_success_measure_defined");
+  }
+
+  if (request.missionId === "urban_repair") {
+    const mobility = containsAny(text, words(["travessia insegura", "semaforo ausente"], ["unsafe crossing", "missing signal"]));
+    const sanitation = containsAny(text, words(["lixo acumulado", "coleta atrasada"], ["accumulated waste", "delayed collection"]));
+    if (mobility && sanitation) met.add("urban_problems_diagnosed");
+    choice = selectChoice(text, {
+      mobility_then_sanitation: words(["mobilidade primeiro", "travessia primeiro"], ["mobility first", "crossing first"]),
+      sanitation_then_mobility: words(["saneamento primeiro", "lixo primeiro"], ["sanitation first", "waste first"]),
+    });
+    if (choice) met.add("urban_priority_defined");
+    if (containsAny(text, words(["causado", "causa", "ausente", "atrasada"], ["caused", "cause", "missing", "delayed"]))) met.add("urban_root_causes_explained");
+    if (choice && mobility && sanitation && containsAny(text, words(["depois", "entao"], ["then", "next"]))) met.add("urban_corrections_ordered");
+    if (containsAny(text, words(["verificar", "seguranca", "confirmar"], ["verify", "safety", "check"]))) met.add("urban_safety_check_defined");
+    if (containsAny(text, words(["monitorar", "semanalmente", "acompanhar"], ["monitor", "weekly", "follow-up"]))) met.add("urban_followup_defined");
+  }
+
   return {
     offTopic: false,
     choice,

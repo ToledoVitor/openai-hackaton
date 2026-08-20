@@ -127,6 +127,8 @@ Parameter Trial uses temperatures `0.2`, `0.7`, and `1.2`. Only one sampling con
 
 ## Game state
 
+Current learning journey exposes housing, hospital, and urban-repair missions independently. `completedMissionIds` is a unique set serialized in canonical registry order; `activeMissionId` is a freely chosen display focus. Recommendation selects first incomplete mission but never gates access. Only `/api/evaluate` success plus installation-bound signed completion-set receipt may add completion. Local storage cannot authorize city effects or NPC improvement.
+
 Browser reducer stores:
 
 - current narrative beat;

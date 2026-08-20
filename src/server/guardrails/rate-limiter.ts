@@ -23,7 +23,7 @@ export function rateLimitResponse(decision: RateLimitDecision): Response | undef
   }
 
   return Response.json(
-    { error: "too_many_requests" },
+    { error: "rate_limited" },
     {
       status: 429,
       headers: { "Retry-After": String(Math.ceil(decision.retryAfterMs / 1_000)) },

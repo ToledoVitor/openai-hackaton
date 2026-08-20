@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { EvaluationRequest, TurnResult } from "../../../src/domain/contracts";
+import type { EvaluateMissionRequest, EvaluateMissionResponse } from "../../../src/domain/mission-contracts";
 import { ModerationUnavailableError } from "../../../src/server/evaluation/errors";
 import { createEvaluatePost, POST } from "./route";
 
@@ -20,6 +21,37 @@ const validResult: TurnResult = {
   citizenLine: "A step-free entrance welcomes every neighbor.",
   nextHint: "requireClearSign",
   celebration: false,
+};
+
+const validMissionRequest: EvaluateMissionRequest = {
+  missionId: "apartment_construction",
+  stepId: "plan",
+  language: "english",
+  prompt: "Build accessible housing for neighborhood families.",
+  attempt: 1,
+  satisfiedCriteria: [],
+  safetyIdentifier: "install_1234567890abcdef",
+};
+
+const validMissionResult: EvaluateMissionResponse = {
+  missionId: "apartment_construction",
+  stepId: "plan",
+  language: "english",
+  source: "fallback",
+  status: "partial",
+  choice: "balanced_housing",
+  progress: {
+    satisfied: ["housing_goal_clear"],
+    newlySatisfied: ["housing_goal_clear"],
+    missing: ["housing_budget_defined"],
+  },
+  teachingConcept: "Goals and constraints",
+  feedback: {
+    summary: "Plan improved.",
+    explanation: "Budget remains.",
+    nextInstruction: "Provide a budget.",
+  },
+  effectKeys: ["housing_plan_incomplete"],
 };
 
 function request(body: string): Request {
@@ -78,6 +110,7 @@ describe("createEvaluatePost", () => {
     const response = await post(request(body));
 
     expect(response.status).toBe(400);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
     await expect(response.json()).resolves.toEqual({ error: "invalid_request" });
   });
 
@@ -102,5 +135,129 @@ describe("createEvaluatePost", () => {
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(JSON.parse(body)).toEqual(validResult);
     expect(body).not.toContain("sk-project-secret");
+  });
+
+  it("returns only a schema-validated mission result", async () => {
+    const post = createEvaluatePost({
+      evaluate: async () => validResult,
+      evaluateMission: async () => validMissionResult,
+    });
+
+    const response = await post(request(JSON.stringify(validMissionRequest)));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    await expect(response.json()).resolves.toEqual(validMissionResult);
+  });
+
+  it("does not trust browser-claimed criteria or choice", async () => {
+    let received: EvaluateMissionRequest | undefined;
+    const post = createEvaluatePost({
+      evaluate: async () => validResult,
+      evaluateMission: async (missionRequest) => {
+        received = missionRequest;
+        return validMissionResult;
+      },
+    });
+
+    const response = await post(request(JSON.stringify({
+      ...validMissionRequest,
+      satisfiedCriteria: [
+        "housing_goal_clear",
+        "housing_capacity_defined",
+        "housing_budget_defined",
+        "housing_accessibility_defined",
+        "housing_green_space_defined",
+        "housing_path_selected",
+      ],
+      selectedChoice: "balanced_housing",
+    })));
+
+    expect(response.status).toBe(200);
+    expect(received?.satisfiedCriteria).toEqual([]);
+    expect(received?.selectedChoice).toBeUndefined();
+  });
+
+  it("accepts any learning mission and issues signed independent progress", async () => {
+    const authority = {
+      verify: (receipt: string) => receipt === "signed:apartment_construction"
+        ? { completedMissionIds: ["apartment_construction" as const] }
+        : null,
+      issue: (_safetyIdentifier: string, completedMissionIds: readonly string[]) => `signed:${completedMissionIds.join(",")}`,
+    };
+    const post = createEvaluatePost({
+      evaluate: async () => validResult,
+      evaluateMission: async (missionRequest) => ({
+        ...validMissionResult,
+        missionId: missionRequest.missionId,
+        stepId: missionRequest.stepId,
+        status: "success",
+        effectKeys: [],
+      }),
+      progressAuthority: authority,
+    });
+
+    const hospital = await post(request(JSON.stringify({
+      ...validMissionRequest,
+      missionId: "hospital_construction",
+      stepId: "prioritize",
+    })));
+    expect(hospital.status).toBe(200);
+    await expect(hospital.json()).resolves.toMatchObject({
+      status: "success",
+      progressReceipt: "signed:hospital_construction",
+    });
+
+    const completed = await post(request(JSON.stringify({
+      ...validMissionRequest,
+      missionId: "urban_repair",
+      stepId: "diagnose",
+      progressReceipt: "signed:apartment_construction",
+    })));
+    expect(completed.status).toBe(200);
+    await expect(completed.json()).resolves.toMatchObject({
+      status: "success",
+      progressReceipt: "signed:apartment_construction,urban_repair",
+    });
+  });
+
+  it("sanitizes malformed mission evaluator output", async () => {
+    const post = createEvaluatePost({
+      evaluate: async () => validResult,
+      evaluateMission: async () => ({
+        ...validMissionResult,
+        providerDebug: "sk-project-secret stack trace",
+      }) as EvaluateMissionResponse,
+    });
+
+    const response = await post(request(JSON.stringify(validMissionRequest)));
+    const body = await response.text();
+
+    expect(response.status).toBe(500);
+    expect(JSON.parse(body)).toEqual({
+      error: { code: "internal_error", message: "internal_error", retryable: true },
+    });
+    expect(body).not.toContain("providerDebug");
+    expect(body).not.toContain("sk-project-secret");
+  });
+
+  it("rejects a schema-valid mission result that is not bound to the request", async () => {
+    const post = createEvaluatePost({
+      evaluate: async () => validResult,
+      evaluateMission: async () => ({
+        ...validMissionResult,
+        missionId: "hospital_construction",
+        stepId: "prioritize",
+      }),
+      progressAuthority: {
+        verify: () => null,
+        issue: () => "signed.receipt",
+      },
+    });
+
+    const response = await post(request(JSON.stringify(validMissionRequest)));
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toMatchObject({ error: { code: "internal_error" } });
   });
 });

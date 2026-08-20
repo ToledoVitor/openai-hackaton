@@ -1,23 +1,40 @@
+import {
+  realtimeSessionRequestSchema,
+  type RealtimeSessionRequest,
+} from "../../../src/domain/mission-contracts";
+import { readJsonWithLimit } from "../../../src/server/guardrails";
 import { createRealtimeClientSecret } from "../../../src/server/realtime/create-client-secret";
 
 export const runtime = "nodejs";
 
 type RealtimeCredential = { value: string; expiresAt: number };
-type CreateClientSecret = () => Promise<RealtimeCredential>;
+type CreateClientSecret = (session: RealtimeSessionRequest) => Promise<RealtimeCredential>;
+
+const REALTIME_BODY_LIMIT_BYTES = 8 * 1024;
 
 function json(body: unknown, status: number, cacheControl?: string): Response {
   return Response.json(body, {
     status,
-    headers: cacheControl ? { "Cache-Control": cacheControl } : undefined,
+    headers: {
+      "Cache-Control": cacheControl ?? "no-store",
+      Pragma: "no-cache",
+    },
   });
 }
 
 export function createRealtimeTokenPost(dependencies: { createClientSecret: CreateClientSecret }) {
   return async function post(request: Request): Promise<Response> {
-    void request;
+    let session: RealtimeSessionRequest;
+    try {
+      session = realtimeSessionRequestSchema.parse(
+        await readJsonWithLimit(request, REALTIME_BODY_LIMIT_BYTES),
+      );
+    } catch {
+      return json({ error: "invalid_request" }, 400);
+    }
 
     try {
-      const credential = await dependencies.createClientSecret();
+      const credential = await dependencies.createClientSecret(session);
 
       return json(credential, 200, "no-store");
     } catch {
@@ -34,9 +51,10 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   return createRealtimeTokenPost({
-    createClientSecret: () => createRealtimeClientSecret({
+    createClientSecret: (session) => createRealtimeClientSecret({
       apiKey,
-      safetyIdentifier: request.headers.get("x-safety-identifier") ?? undefined,
+      session,
+      model: "gpt-realtime-2.1",
     }),
   })(request);
 }

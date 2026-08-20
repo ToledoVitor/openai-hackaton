@@ -122,13 +122,26 @@ export async function evaluateMissionPrompt(
     source,
     ...(temperatureTrial ? { temperatureTrial } : {}),
   });
-  const fallbackMiss =
-    source === "fallback" &&
-    extraction.choice === null &&
-    Object.values(extraction.criteria).every((criterion) => !criterion.met) &&
-    temperatureTrial?.status !== "generated";
+  if (source === "fallback") {
+    const feedback = request.language === "portuguese"
+      ? {
+          summary: "A avaliação está indisponível no momento.",
+          explanation: "Seu projeto não foi aprovado nem alterou a cidade.",
+          nextInstruction: "Tente novamente em instantes.",
+        }
+      : {
+          summary: "Evaluation is unavailable right now.",
+          explanation: "Your project was not approved and the city did not change.",
+          nextInstruction: "Try again in a moment.",
+        };
 
-  return fallbackMiss
-    ? { ...result, status: "retry", effectKeys: ["evaluation_unavailable_no_change"] }
-    : result;
+    return {
+      ...result,
+      status: "retry",
+      feedback,
+      effectKeys: ["evaluation_unavailable_no_change"],
+    };
+  }
+
+  return result;
 }

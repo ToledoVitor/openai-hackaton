@@ -6,12 +6,18 @@ import {
 } from "../../../src/domain/contracts";
 import {
   evaluateMissionRequestSchema,
+  evaluateMissionResponseSchema,
   MISSION_STEPS,
   type EvaluateMissionRequest,
   type EvaluateMissionResponse,
   type EvaluationErrorCode,
   type EvaluationErrorResponse,
 } from "../../../src/domain/mission-contracts";
+import {
+  canonicalCompletedMissionIds,
+  isLearningMissionId,
+  type LearningMissionId,
+} from "../../../src/domain/learning-journey";
 import { EvaluationError, ModerationUnavailableError } from "../../../src/server/evaluation/errors";
 import {
   evaluateMissionPrompt,
@@ -25,6 +31,7 @@ import {
 import {
   readJsonWithLimit,
 } from "../../../src/server/guardrails";
+import { createProgressAuthority, type ProgressAuthority } from "../../../src/server/progress/progress-receipt";
 
 export const runtime = "nodejs";
 
@@ -33,10 +40,10 @@ type EvaluateMission = (request: EvaluateMissionRequest) => Promise<EvaluateMiss
 
 const EVALUATION_BODY_LIMIT_BYTES = 16 * 1024;
 
-function json(body: unknown, status: number, cacheControl?: string): Response {
+function json(body: unknown, status: number, cacheControl = "no-store"): Response {
   return Response.json(body, {
     status,
-    headers: cacheControl ? { "Cache-Control": cacheControl } : undefined,
+    headers: { "Cache-Control": cacheControl, Pragma: "no-cache" },
   });
 }
 
@@ -88,6 +95,7 @@ function invalidMissionRequest(body: unknown): EvaluationErrorResponse {
 export function createEvaluatePost(dependencies: {
   evaluate: Evaluate;
   evaluateMission?: EvaluateMission;
+  progressAuthority?: ProgressAuthority;
 }) {
   return async function post(request: Request): Promise<Response> {
     let body: unknown;
@@ -106,8 +114,48 @@ export function createEvaluatePost(dependencies: {
       if (!parsed.success) return json(invalidMissionRequest(body), 400);
       if (!dependencies.evaluateMission) return json(missionError("internal_error"), 503);
 
+      let completedMissionIds: LearningMissionId[] = [];
+      if (isLearningMissionId(parsed.data.missionId)) {
+        if (parsed.data.progressReceipt) {
+          const verified = dependencies.progressAuthority?.verify(
+            parsed.data.progressReceipt,
+            parsed.data.safetyIdentifier,
+          );
+          if (!verified) return json(missionError("invalid_progress"), 400);
+          completedMissionIds = verified.completedMissionIds;
+        }
+      }
+
       try {
-        return json(await dependencies.evaluateMission(parsed.data), 200, "no-store");
+        const authoritativeRequest: EvaluateMissionRequest = {
+          ...parsed.data,
+          satisfiedCriteria: [],
+        };
+        delete authoritativeRequest.selectedChoice;
+        const evaluated = await dependencies.evaluateMission(authoritativeRequest);
+        if (
+          evaluated.missionId !== parsed.data.missionId ||
+          evaluated.stepId !== parsed.data.stepId ||
+          evaluated.language !== parsed.data.language
+        ) {
+          return json(missionError("internal_error"), 500);
+        }
+        const withProgress = evaluated.status === "success" && isLearningMissionId(evaluated.missionId)
+          ? {
+              ...evaluated,
+              progressReceipt: dependencies.progressAuthority?.issue(
+                parsed.data.safetyIdentifier,
+                canonicalCompletedMissionIds([...completedMissionIds, evaluated.missionId]),
+              ),
+            }
+          : evaluated;
+        if (evaluated.status === "success" && isLearningMissionId(evaluated.missionId) && !withProgress.progressReceipt) {
+          return json(missionError("internal_error"), 503);
+        }
+        const result = evaluateMissionResponseSchema.parse(
+          withProgress,
+        );
+        return json(result, 200, "no-store");
       } catch (error) {
         if (error instanceof ModerationUnavailableError) {
           return json(missionError("moderation_unavailable"), 503);
@@ -160,6 +208,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const gateway = createOpenAIEvaluationGateway(apiKey);
   const temperatureClient = createTemperatureClient(apiKey);
+  const progressAuthority = createProgressAuthority(apiKey);
 
   return createEvaluatePost({
     evaluate: (evaluationRequest) =>
@@ -175,5 +224,6 @@ export async function POST(request: Request): Promise<Response> {
           run: (request) => runTemperatureTrial({ request, client: temperatureClient }),
         },
       }),
+    progressAuthority,
   })(request);
 }

@@ -2,6 +2,12 @@
 
 Server reads `OPENAI_API_KEY` only from environment. Optional `OPENAI_REALTIME_MODEL` selects voice model; default is `gpt-realtime`. Every successful response uses `Cache-Control: no-store`.
 
+## Independent learning progress
+
+Housing, hospital, and urban-repair missions are independently selectable. `/api/evaluate` accepts any valid mission/step pair without prerequisite completion. Browser-supplied criteria and choices are hints only and are removed at server boundary before authoritative evaluation.
+
+Successful learning evaluation returns opaque `progressReceipt`. Receipt payload is HMAC-signed, bound to `safetyIdentifier`, contains unique completed mission IDs in canonical registry order, and never contains prompts or provider data. Send latest receipt on later evaluation and `/api/progress` calls. Server verifies receipt, unions successful mission ID, and signs updated set. Invalid/tampered receipts fail with `400 invalid_progress`; no completion changes. Replaying older valid receipt can only restore its signed subset and cannot forge another mission.
+
 ## Evaluate mission
 
 `POST /api/evaluate`
@@ -46,7 +52,7 @@ Success body:
 }
 ```
 
-Only `progress` and `effectKeys` are authoritative for game state. API remains stateless; send returned `progress.satisfied` and `choice` as next request's `satisfiedCriteria` and `selectedChoice`.
+Only server-validated response and signed receipt are authoritative for game state. API remains stateless, but browser-claimed prior criteria and choice never authorize success.
 
 Exact languages: `portuguese`, `english`. Server never auto-detects or switches response language.
 

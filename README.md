@@ -1,53 +1,72 @@
 # AI City
 
-Jogo de gestão urbana em uma cidade low-poly interativa que reúne o frontend Three.js e o backend OpenAI no mesmo aplicativo Next.js.
+AI City is a bilingual educational mayor game. Players explore a low-poly Three.js city, choose any of three independent civic-learning missions, receive server-authoritative feedback, and see residents and city state respond.
 
-A entrada apresenta a cidade, pede o nome do jogador e inicia quatro missões sobre escola, mobilidade, infraestrutura e educação.
+Journey: language and name → explorable city → player-chosen housing, hospital, or urban-repair mission → feedback → another mission or continued exploration. Recommendation stays optional and never locks choices.
 
-## Acesso público
+## Current release status
 
-Temos uma versão pública onde você pode testar a ideia. Ela foi feita usando a feature de sites do Codex
-[Jogar AI City](https://cidade-viva-hackathon.pr-vitortoledo.chatgpt.site)
+Code is prepared under Apache-2.0. Bundled CC0 city models and audio have source/license records. Current branding is a source-authored HTML/CSS wordmark. Current tree and current-tag source archives contain no legacy logo PNG, and project asserts no rights over it. Historical Git revisions predate exclusion and are not release artifacts; rewriting shared history is intentionally outside this release. See [ATTRIBUTIONS.md](ATTRIBUTIONS.md).
 
-## Executar
+No screenshot is bundled; release contains only audited media listed in [ATTRIBUTIONS.md](ATTRIBUTIONS.md).
+
+## Local setup
+
+Requires Node.js 22.13 or newer.
 
 ```bash
-npm install
+npm ci
+cp .env.example .env.local
 npm run dev
 ```
 
-Abra `http://localhost:3000`.
+Open localhost URL printed by dev server. `OPENAI_API_KEY` is optional for entry, exploration, copy, and deterministic domain tests. Keep it server-only; never create `NEXT_PUBLIC_OPENAI_API_KEY`.
 
-## Backend
+## Safe provider testing
 
-Configure `OPENAI_API_KEY` em `.env` a partir de `.env.example`; a chave deve permanecer somente no servidor.
+Automated tests are offline and deterministic. Vitest deletes `OPENAI_API_KEY` and blocks network requests to `openai.com` and subdomains. Any automated live provider call, credential use, or token cost is release-blocking.
 
-O backend preservado nesta integração expõe:
+Real evaluation, Speech, or Realtime testing is manual-only: a human explicitly starts app with server-side key, performs intended action, and monitors usage. Never put production prompts, secrets, or personal data in fixtures.
 
-- `POST /api/evaluate` para avaliar tentativas nas quatro missões, em português ou inglês.
-- `POST /api/realtime-token` para criar sessão temporária de conversa por voz, com áudio bidirecional e tool `submit_prompt`.
-- `POST /api/speech` para gerar áudio de uma dica aprovada.
-
-A sessão Realtime nunca decide progresso. O frontend encaminha `submit_prompt` para `/api/evaluate` e aplica somente `progress` e `effectKeys` retornados pelo avaliador determinístico.
-
-## Documentação
-
-- [Design da API bilíngue para quatro missões](docs/superpowers/specs/2026-08-19-mission-evaluation-api-design.md)
-- [Contrato HTTP e integração Realtime Voice](docs/API.md)
-- [Catálogo de efeitos para geração de assets](docs/ASSET-EFFECT-CATALOG.md)
-
-## Assets
-
-Consulte [ATTRIBUTIONS.md](ATTRIBUTIONS.md) para créditos e licenças CC0.
-
-## Áudio
-
-Trilha urbana e efeitos usam arquivos CC0 existentes. Fontes, autores, licenças e checksums ficam em [`public/audio/SOURCES.md`](public/audio/SOURCES.md).
-
-O áudio inicia após primeira interação do jogador. Controle no topo permite silenciar ou reativar. Para ouvir isoladamente:
+## Quality commands
 
 ```bash
-npm run audio:preview
+npm test
+npm run typecheck
+npm run lint
+npm run build
 ```
 
-## MIT license
+## Architecture
+
+- `app/`: Next-compatible page and server routes. Browser calls server routes only.
+- `src/domain/`: typed mission registry, independent completion set, evaluation rules, NPC dialogue.
+- `src/server/`: OpenAI gateways, timeouts, validation, progress receipts, safe errors.
+- `src/game/main.ts`: lightweight entry bootstrap.
+- `src/game/runtime.ts`: deferred Three.js/game runtime loaded after profile submit.
+- `src/client/`: language, storage, and typed HTTP clients.
+- `tests/offline-openai-guard.ts`: global no-key/no-provider test guard.
+
+Completion is server-authoritative through installation-bound signed receipts. Mission selection is free. Realtime is optional and lazy; it cannot grant completion directly.
+
+## Contributing
+
+Start with [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Small first contributions include bilingual copy tests, accessibility checks, deterministic browser fixtures, and asset-provenance improvements.
+
+## Documentation
+
+- [Sprint architecture and validation](docs/AI_CITY_OVERNIGHT_SPRINT.md)
+- [Free-mission migration plan](docs/plans/2026-08-20-free-mission-choice.md)
+- [Visual, voice, and free-choice review](docs/reviews/2026-08-20-visual-voice-free-choice-review.md)
+- [API contract](docs/API.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Asset attribution audit](ATTRIBUTIONS.md)
+- [Third-party notices](THIRD_PARTY_NOTICES.md)
+
+## License
+
+Source code and project documentation: [Apache License 2.0](LICENSE), copyright 2026 Vitor Toledo.
+
+Repository revisions before this transition were distributed under MIT; original copyright and permission notice remains at [LICENSES/MIT-legacy.txt](LICENSES/MIT-legacy.txt). Apache-2.0 governs new contributions/current distribution without removing permissions or notices attached to earlier MIT-licensed revisions.
+
+Media keeps its own license/provenance status. Apache-2.0 does not grant rights to third-party or unresolved media; consult [ATTRIBUTIONS.md](ATTRIBUTIONS.md) before redistribution.
