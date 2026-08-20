@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import { createInitialJourneyState } from "./learning-journey";
-import { NPC_IDS, getNpcDialogue } from "./npc-dialogue";
+import { NPC_IDS, getNpcDialogue, getNpcForMission } from "./npc-dialogue";
 
 describe("deterministic city NPC dialogue", () => {
   it("links one NPC to each learning mission", () => {
     expect(NPC_IDS).toEqual(["housing_resident", "hospital_nurse", "urban_guardian"]);
+    expect(getNpcForMission("apartment_construction")).toBe("housing_resident");
+    expect(getNpcForMission("hospital_construction")).toBe("hospital_nurse");
+    expect(getNpcForMission("urban_repair")).toBe("urban_guardian");
   });
 
   it.each([

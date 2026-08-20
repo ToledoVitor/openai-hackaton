@@ -50,6 +50,16 @@ const NPCS: Record<NpcId, NpcDefinition> = {
   },
 };
 
+const NPC_BY_MISSION: Readonly<Record<LearningMissionId, NpcId>> = {
+  apartment_construction: "housing_resident",
+  hospital_construction: "hospital_nurse",
+  urban_repair: "urban_guardian",
+};
+
+export function getNpcForMission(missionId: LearningMissionId): NpcId {
+  return NPC_BY_MISSION[missionId];
+}
+
 export function getNpcDialogue(npcId: NpcId, state: JourneyState, language: Language) {
   const npc = NPCS[npcId];
   const improved = state.completedMissionIds.includes(npc.relatedMissionId);

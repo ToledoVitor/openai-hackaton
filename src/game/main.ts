@@ -25,7 +25,7 @@ import {
   type LearningMissionId,
 } from '../domain/learning-journey';
 import type { EvaluateMissionResponse, Language } from '../domain/mission-contracts';
-import { getNpcDialogue, NPC_IDS, type NpcId } from '../domain/npc-dialogue';
+import { getNpcDialogue, getNpcForMission, NPC_IDS, type NpcId } from '../domain/npc-dialogue';
 import { Cidade } from './cidade';
 import { mostrarEntrada, type PlayerProfile } from './entrada';
 import { moveExplorer, movementFromKeys, type ExplorerBounds } from './exploration';
@@ -275,11 +275,12 @@ function selectMission(missionId: LearningMissionId) {
   }
   journey = selection.state;
   activeMissionId = missionId;
-  selectedNpc = NPC_IDS[missionIndex()] ?? NPC_IDS[0];
+  selectedNpc = getNpcForMission(missionId);
   lastResponse = null;
   ui.prompt.value = '';
   ui.promptStatus.textContent = '';
   renderMission();
+  renderNpc();
   focusMission();
   return true;
 }
@@ -494,7 +495,7 @@ canvas.addEventListener('click', (event) => {
   pointer.y = -(event.clientY / innerHeight) * 2 + 1;
   raycaster.setFromCamera(pointer, camera);
   if (raycaster.intersectObjects(cidade.alvosNpc, true).length > 0) {
-    renderNpc(NPC_IDS[missionIndex()] ?? NPC_IDS[0]);
+    renderNpc(getNpcForMission(activeMissionId));
     return;
   }
   if (raycaster.intersectObjects(cidade.alvosProjeto, true).length > 0) {
@@ -546,6 +547,7 @@ async function start() {
     });
     journey = parseJourneyState(JSON.stringify({ completedMissionIds: verified.completedMissionIds }));
     activeMissionId = journey.activeMissionId ?? LEARNING_MISSION_IDS.at(-1)!;
+    selectedNpc = getNpcForMission(activeMissionId);
     progressReceipt = verified.progressReceipt;
     if (progressReceipt) saveProgressReceipt(window.localStorage, progressReceipt);
     else clearProgressReceipt(window.localStorage);
