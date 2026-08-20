@@ -19,4 +19,10 @@ describe("bilingual interface copy", () => {
     expect(UI_COPY.portuguese.error_timeout).toContain("tempo");
     expect(UI_COPY.english.error_rate_limited).not.toBe(UI_COPY.portuguese.error_rate_limited);
   });
+
+  it("localizes primary navigation accessibility labels", () => {
+    for (const key of ["city_canvas_label", "mission_navigation_label", "camera_controls_label"] as const) {
+      expect(uiText("portuguese", key)).not.toBe(uiText("english", key));
+    }
+  });
 });

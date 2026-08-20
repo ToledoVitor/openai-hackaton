@@ -23,4 +23,11 @@ describe("city exploration", () => {
   it("rejects obstacle overlap while preserving free-axis movement", () => {
     expect(moveExplorer({ x: 0, z: 2 }, { x: 1, z: 1 }, 2, bounds)).toEqual({ x: 0, z: 4 });
   });
+
+  it("cannot jump across an obstacle with a long click movement", () => {
+    const result = moveExplorer({ x: 0, z: 2 }, { x: 1, z: 0 }, 8, bounds);
+
+    expect(result.x).toBeLessThan(1);
+    expect(result.z).toBe(2);
+  });
 });

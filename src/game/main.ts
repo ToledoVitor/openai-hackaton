@@ -23,6 +23,7 @@ import { Cidade } from './cidade';
 import { mostrarEntrada, type PlayerProfile } from './entrada';
 import { moveExplorer, movementFromKeys, type ExplorerBounds } from './exploration';
 import { RealtimeVoice } from './realtime';
+import { MISSION_SCENE_LOCATIONS } from './mission-scene';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#cidade')!;
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -97,6 +98,7 @@ const ui = {
   notice: document.querySelector<HTMLElement>('#aviso')!,
   overview: document.querySelector<HTMLButtonElement>('#visao-geral')!,
   focus: document.querySelector<HTMLButtonElement>('#focar-missao')!,
+  cameraControls: document.querySelector<HTMLElement>('#controles-camera')!,
 };
 
 const labels = {
@@ -210,6 +212,9 @@ function renderLanguage() {
     if (element) element.textContent = uiText(language, key);
   });
   ui.prompt.placeholder = uiText(language, 'prompt_placeholder');
+  canvas.setAttribute('aria-label', uiText(language, 'city_canvas_label'));
+  ui.missionList.setAttribute('aria-label', uiText(language, 'mission_navigation_label'));
+  ui.cameraControls.setAttribute('aria-label', uiText(language, 'camera_controls_label'));
   ui.submit.textContent = uiText(language, evaluating ? 'evaluating' : 'submit_plan');
   ui.showHint.textContent = uiText(language, 'hint');
   ui.voiceHelp.textContent = uiText(language, 'voice_optional');
@@ -251,7 +256,7 @@ function renderMission() {
   renderMissionList();
   updateCityState();
   updateProgress();
-  cidade.prepararMissao(missionIndex());
+  cidade.prepararMissao(activeMissionId);
 }
 
 function selectMission(missionId: LearningMissionId) {
@@ -384,14 +389,9 @@ function showNotice(message: string) {
 }
 
 function focusMission() {
-  const frames = [
-    { position: [8, 10, 21], target: [-8, 1.2, 7] },
-    { position: [27, 11, 18], target: [14, 1, 2] },
-    { position: [23, 12, 22], target: [6.6, 1, 0.5] },
-  ];
-  const frame = frames[missionIndex()] ?? frames[0]!;
-  camera.position.fromArray(frame.position);
-  controles.target.fromArray(frame.target);
+  const location = MISSION_SCENE_LOCATIONS[activeMissionId];
+  camera.position.fromArray(location.cameraPosition);
+  controles.target.fromArray(location.cameraTarget);
   explorer.copy(controles.target);
   controles.update();
   cidade.destacar();

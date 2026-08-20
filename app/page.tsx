@@ -16,7 +16,7 @@ declare global {
 const GameUi = memo(function GameUi() {
   return (
     <>
-      <canvas id="cidade" aria-label="AI City interactive 3D city" />
+      <canvas id="cidade" aria-label="Cidade 3D interativa de AI City" />
 
       <aside className="estado-cidade" aria-labelledby="estado-titulo">
         <div className="estado-cabecalho">
@@ -35,7 +35,7 @@ const GameUi = memo(function GameUi() {
       </aside>
 
       <section className="projeto" aria-labelledby="missao-titulo">
-        <nav className="lista-missoes" id="lista-missoes" aria-label="Learning missions" />
+        <nav className="lista-missoes" id="lista-missoes" aria-label="Missões de aprendizagem" />
         <div className="projeto-cabecalho">
           <span className="etiqueta" id="missao-indice" />
           <span className="estado-missao" id="estado-missao" />
@@ -92,7 +92,7 @@ const GameUi = memo(function GameUi() {
         <div className="npc-abas" id="npc-abas" />
       </aside>
 
-      <nav className="camera" aria-label="Camera controls">
+      <nav className="camera" id="controles-camera" aria-label="Controles da câmera">
         <button id="visao-geral" type="button" />
         <button className="ativo" id="focar-missao" type="button" />
       </nav>

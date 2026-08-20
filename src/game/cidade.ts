@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js';
+import type { LearningMissionId } from '../domain/learning-journey';
+import { MISSION_SCENE_LOCATIONS, urbanProblemRemains } from './mission-scene';
 
 const BASE = '/assets/3d/cidade';
 
@@ -94,14 +96,13 @@ export class Cidade {
     this.reiniciar();
   }
 
-  prepararMissao(indice: number) {
-    this.posicionarPersonagens(indice);
-    if (indice === 2 && this.lixoProblema && !this.decisoes.includes('limpeza')) {
+  prepararMissao(missionId: LearningMissionId) {
+    this.posicionarPersonagens(missionId);
+    if (missionId === 'urban_repair' && this.lixoProblema && urbanProblemRemains(this.decisoes)) {
       this.lixoProblema.visible = true;
     }
     if (this.destaque) {
-      const locais: Array<[number, number]> = [[-8, 7], [14, 2]];
-      const [x, z] = locais[indice] ?? locais[0];
+      const [x, z] = MISSION_SCENE_LOCATIONS[missionId].highlight;
       this.destaque.position.set(x, 0.3, z);
       this.destaque.visible = true;
     }
@@ -289,14 +290,8 @@ export class Cidade {
     if (objeto) objeto.visible = visivel;
   }
 
-  private posicionarPersonagens(indice: number) {
-    const locais = [
-      [[-9.7, 10.7, 0.05], [-7.3, 10.65, -0.05]],
-      [[12.7, 4.8, 0.2], [15, 4.7, -0.2]],
-      [[11.7, 7.8, Math.PI], [14.3, -3.2, 0]],
-      [[-9.7, 10.7, 0.05], [-7.3, 10.65, -0.05]],
-    ] as const;
-    const destino = locais[indice] ?? locais[0];
+  private posicionarPersonagens(missionId: LearningMissionId) {
+    const destino = MISSION_SCENE_LOCATIONS[missionId].characters;
     this.personagens.forEach((personagem, personagemIndice) => {
       const [x, z, rotacaoY] = destino[personagemIndice] ?? destino[0];
       personagem.position.x = x;

@@ -25,9 +25,20 @@ export function moveExplorer(
   const clampX = (x: number) => Math.min(bounds.maxX, Math.max(bounds.minX, x));
   const clampZ = (z: number) => Math.min(bounds.maxZ, Math.max(bounds.minZ, z));
   let next = { ...current };
-  const candidateX = { x: clampX(current.x + direction.x * distance), z: current.z };
-  if (!blocked(candidateX, bounds.obstacles)) next = candidateX;
-  const candidateZ = { x: next.x, z: clampZ(current.z + direction.z * distance) };
-  if (!blocked(candidateZ, bounds.obstacles)) next = candidateZ;
+
+  const moveAxis = (axis: "x" | "z", delta: number): boolean => {
+    const origin = next[axis];
+    const target = axis === "x" ? clampX(origin + delta) : clampZ(origin + delta);
+    const steps = Math.max(1, Math.ceil(Math.abs(target - origin) / 0.25));
+    for (let step = 1; step <= steps; step += 1) {
+      const candidate = { ...next, [axis]: origin + ((target - origin) * step) / steps };
+      if (blocked(candidate, bounds.obstacles)) return false;
+    }
+    next = { ...next, [axis]: target };
+    return true;
+  };
+
+  moveAxis("x", direction.x * distance);
+  moveAxis("z", direction.z * distance);
   return next;
 }

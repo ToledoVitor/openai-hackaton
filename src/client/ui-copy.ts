@@ -14,6 +14,7 @@ export const REQUIRED_UI_KEYS = [
   "error_rate_limited", "error_provider_unavailable", "error_invalid_response",
   "error_network", "error_timeout", "error_unknown", "audio", "audio_off",
   "music", "ambience", "mute", "unmute", "prototype",
+  "city_canvas_label", "mission_navigation_label", "camera_controls_label",
 ] as const;
 
 export type UiCopyKey = (typeof REQUIRED_UI_KEYS)[number];
@@ -54,6 +55,9 @@ export const UI_COPY: Record<Language, UiCopy> = {
     audio: "Som", audio_off: "Som desligado", music: "Trilha sonora",
     ambience: "Sons da cidade", mute: "Silenciar", unmute: "Ativar",
     prototype: "Protótipo do hackathon da OpenAI",
+    city_canvas_label: "Cidade 3D interativa de AI City",
+    mission_navigation_label: "Missões de aprendizagem",
+    camera_controls_label: "Controles da câmera",
   },
   english: {
     language_label: "Language", portuguese: "Português", english: "English",
@@ -89,6 +93,9 @@ export const UI_COPY: Record<Language, UiCopy> = {
     audio: "Sound", audio_off: "Sound off", music: "Music",
     ambience: "City sounds", mute: "Mute", unmute: "Turn on",
     prototype: "OpenAI hackathon prototype",
+    city_canvas_label: "AI City interactive 3D city",
+    mission_navigation_label: "Learning missions",
+    camera_controls_label: "Camera controls",
   },
 };
 
