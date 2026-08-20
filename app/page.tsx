@@ -97,7 +97,11 @@ const GameUi = memo(function GameUi() {
         <button className="ativo" id="focar-missao" type="button" />
       </nav>
       <p className="ajuda-exploracao" id="ajuda-exploracao" />
-      <div className="carregando" id="carregando"><span /><b id="carregando-texto" /></div>
+      <div className="carregando" id="carregando">
+        <span />
+        <b id="carregando-texto" />
+        <button id="recarregar-cidade" type="button" hidden />
+      </div>
       <div className="aviso" id="aviso" role="status" aria-live="polite" />
     </>
   );

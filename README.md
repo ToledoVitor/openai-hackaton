@@ -65,4 +65,6 @@ Start with [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), and [
 
 Source code and project documentation: [Apache License 2.0](LICENSE), copyright 2026 Vitor Toledo.
 
+Repository revisions before this transition were distributed under MIT; original copyright and permission notice remains at [LICENSES/MIT-legacy.txt](LICENSES/MIT-legacy.txt). Apache-2.0 governs new contributions/current distribution without removing permissions or notices attached to earlier MIT-licensed revisions.
+
 Media keeps its own license/provenance status. Apache-2.0 does not grant rights to third-party or unresolved media; consult [ATTRIBUTIONS.md](ATTRIBUTIONS.md) before redistribution.

@@ -2,6 +2,10 @@
 
 Project source uses npm packages under licenses recorded by packages and lockfile. Redistributors must preserve applicable notices. Media audit lives in `ATTRIBUTIONS.md`.
 
+## Legacy project license
+
+Before Apache-2.0 adoption, repository was distributed under MIT with copyright notice for Vitor Toledo. MIT permits sublicensing but requires its notice to remain. Exact prior text is preserved at `LICENSES/MIT-legacy.txt`; this repository does not claim separate relicensing authority over another contributor's copyright.
+
 ## Runtime media
 
 - KayKit City Builder Bits 1.0 — CC0 1.0; `public/assets/3d/cidade/LICENSE-kaykit-city-builder.txt`.

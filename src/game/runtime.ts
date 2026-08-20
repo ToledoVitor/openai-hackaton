@@ -551,19 +551,14 @@ export async function start(playerProfile: PlayerProfile) {
     activeMissionId = journey.activeMissionId!;
   }
   renderLanguage();
-  try {
-    await cidade.construir();
-    updateCityEffects();
-    ui.loading.classList.add('oculto');
-    animate();
-    gameStarted = true;
-    controles.enabled = true;
-    renderLanguage();
-    focusMission();
-  } catch {
-    ui.loadingText.textContent = uiText(language, 'loading_error');
-    ui.loading.classList.add('erro');
-  }
+  await cidade.construir();
+  updateCityEffects();
+  ui.loading.classList.add('oculto');
+  animate();
+  gameStarted = true;
+  controles.enabled = true;
+  renderLanguage();
+  focusMission();
 }
 
 (window as unknown as { cidadeViva: unknown }).cidadeViva = {

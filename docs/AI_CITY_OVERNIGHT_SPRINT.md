@@ -39,7 +39,7 @@ Vitest loads `tests/offline-openai-guard.ts` before every suite. Guard deletes `
 
 ## Validation record
 
-- Automated tests: 223 passing across 35 files at final gate; global offline guard loaded for every suite.
+- Automated tests: 224 passing across 35 files at final gate; global offline guard loaded for every suite.
 - TypeScript: strict typecheck passes.
 - ESLint: passes with zero warnings.
 - Production build: passes.
@@ -51,22 +51,22 @@ Vitest loads `tests/offline-openai-guard.ts` before every suite. Guard deletes `
 
 ## Bundle optimization record
 
-Production Vinext build chunk graph before split loaded page chunk then imported whole game immediately during React mount. Sizes use exact file bytes plus Node `zlib` compression.
+Production Vinext build chunk graph before split loaded page chunk then imported whole game immediately during React mount. Sizes use exact file bytes plus Node `zlib` compression. After-values identify final-gate artifacts `page-Cs4Qbifh.js`, `main-CQAQTXZd.js`, and `runtime-b4dz8sYR.js`; content hashes can shift compressed byte counts across otherwise identical rebuilds.
 
 | Boundary | Before raw / gzip / Brotli | After raw / gzip / Brotli | Load timing |
 |---|---:|---:|---|
-| Page | 45,927 / 15,320 / 13,799 B | 46,204 / 15,427 / 13,886 B | Initial |
-| Game bootstrap | 725,811 / 186,978 / 154,212 B | 4,282 / 1,620 / 1,357 B | Initial |
-| Three.js/game runtime | included above | 722,230 / 185,897 / 153,166 B | After valid profile submit |
-| Page + game entry | 771,738 / 202,298 / 168,011 B | 50,486 / 17,047 / 15,243 B | Initial app-specific path |
+| Page | 45,927 / 15,320 / 13,799 B | 46,273 / 15,448 / 13,924 B | Initial |
+| Game bootstrap | 725,811 / 186,978 / 154,212 B | 4,536 / 1,726 / 1,458 B | Initial |
+| Three.js/game runtime | included above | 722,140 / 185,882 / 153,025 B | After valid profile submit |
+| Page + game entry | 771,738 / 202,298 / 168,011 B | 50,809 / 17,174 / 15,382 B | Initial app-specific path |
 
-Initial app-specific path drops 721,252 B raw, 185,251 B gzip, and 152,768 B Brotli (93.5%, 91.6%, 90.9%). Shared framework/Vinext chunks are unchanged. Runtime remains one >500 KB minified chunk because Three.js, GLTFLoader, city logic, domain copy, and Realtime client share game boundary. Further split risks duplicate Three.js or model-loading regressions and is deferred until measured separately.
+Final review build drops initial app-specific path by 720,929 B raw, 185,124 B gzip, and 152,629 B Brotli (93.4%, 91.5%, 90.8%). Shared framework/Vinext chunks are unchanged. Runtime remains one >500 KB minified chunk because Three.js, GLTFLoader, city logic, domain copy, and Realtime client share game boundary. Further split risks duplicate Three.js or model-loading regressions and is deferred until measured separately.
 
-TDD evidence: unresolved entry test failed against previous DOM-eager module, then passed with deferred loader; exact-profile test failed with zero `runtime.start` calls, then passed after profile handoff. Desktop browser showed entry before runtime/API, immediate English switch, then first mission/city after submit. Runtime import failure uses active-language `loading_error` and invites reload.
+TDD evidence: unresolved entry test failed against previous DOM-eager module, then passed with deferred loader; exact-profile test failed with zero `runtime.start` calls, then passed after profile handoff. Post-review failure-state test failed before renderer existed, then passed with active-language error copy, stopped spinner, and explicit reload action. Desktop browser showed entry before runtime/API, immediate English switch, then first mission/city after submit.
 
 ## Open-source readiness
 
-- Root license changed from MIT to Apache-2.0, copyright 2026 Vitor Toledo. Owner is supported by prior repository license/plan text, primary commit identity, and repository remote; no owner was invented.
+- Root license changed from MIT to Apache-2.0, copyright 2026 Vitor Toledo. Owner is supported by prior repository license/plan text, primary commit identity, and repository remote; no owner was invented. Exact former MIT copyright/permission notice remains in `LICENSES/MIT-legacy.txt`, and notices state no separate relicensing authority over other contributors' copyrights.
 - Added README, contribution guide, Contributor Covenant policy, security policy, templates, offline CI, Dependabot, NOTICE, and expanded third-party notices.
 - CI explicitly empties OpenAI credential variables before install/test/typecheck/lint/build. Vitest global guard remains release-blocking protection against OpenAI host traffic.
 - KayKit city assets, Quaternius characters, and OpenGameArt audio have bundled CC0 evidence.
@@ -77,7 +77,7 @@ TDD evidence: unresolved entry test failed against previous DOM-eager module, th
 - Cloudflare IP quotas are process-local fixed windows. Multi-isolate deployments need platform-enforced distributed rate limiting plus project spend alerts for stronger abuse resistance.
 - Realtime client secrets can be reused until expiry by any script already executing in same origin. Current 60-second TTL and mission scope limit impact; CSP and dependency hygiene remain important.
 - Completion display is local, but no longer authoritative: edited local journey JSON is ignored at startup. Only installation-bound HMAC receipts verified by server can restore completion or satisfy server-side prerequisites. Receipt signing currently derives from project API key, so key rotation intentionally resets demo progress.
-- Deferred runtime greatly reduces initial JavaScript, but post-entry Three.js/game chunk remains 722 KB raw. Model bytes and low-end mobile parse/render time need future profiling.
+- Deferred runtime greatly reduces initial JavaScript, but post-entry Three.js/game chunk remains 722,140 B raw. Model bytes and low-end mobile parse/render time need future profiling.
 - Real provider quality and live Realtime audio still need explicit human testing with an operator-provided key; automated and agent-run validation intentionally stays offline.
 
 ## Future open-source contribution checklist

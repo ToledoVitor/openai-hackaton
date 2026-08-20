@@ -103,6 +103,10 @@ button { font: inherit; }
 .carregando { position: fixed; z-index: 5; inset: 0; display: flex; justify-content: center; align-items: center; gap: 10px; color: #315d62; background: #9edbea; font-size: 13px; transition: opacity .45s; }
 .carregando span { width: 18px; height: 18px; border: 2px solid rgba(24,63,69,.2); border-top-color: #168d82; border-radius: 50%; animation: girar .8s linear infinite; }
 .carregando.oculto { opacity: 0; pointer-events: none; }
+.carregando.erro { flex-direction: column; text-align: center; }
+.carregando.erro span { display: none; }
+.carregando.erro button { padding: 10px 16px; border: 0; border-radius: 12px; color: #fff; background: #126f68; cursor: pointer; font-weight: 850; }
+.carregando.erro button:focus-visible { outline: 3px solid #f2c84b; outline-offset: 3px; }
 .aviso { position: fixed; z-index: 4; left: 50%; top: 108px; padding: 11px 18px; border-radius: 99px; color: white; background: #183f45; box-shadow: 0 12px 32px rgba(24,63,69,.22); font-size: 12px; font-weight: 700; opacity: 0; transform: translate(-50%, -10px); transition: .25s; pointer-events: none; }
 .aviso.visivel { opacity: 1; transform: translate(-50%, 0); }
 @keyframes girar { to { transform: rotate(360deg); } }

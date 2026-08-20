@@ -3,7 +3,7 @@
 ## Before opening a change
 
 1. Search existing issues and keep scope focused.
-2. Never add secrets, personal data, provider output, or media without documented redistribution rights.
+2. Never add secrets, another person's private data, provider output, or media without documented redistribution rights.
 3. Preserve Portuguese and English parity. Add readable fallback and tests for primary copy keys.
 4. Keep progression decisions on server. Browser state may present progress but must not authorize it.
 5. Keep OpenAI, Speech, Realtime, and agent-like tests deterministic and offline.
