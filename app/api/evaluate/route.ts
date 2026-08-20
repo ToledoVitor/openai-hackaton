@@ -6,6 +6,7 @@ import {
 } from "../../../src/domain/contracts";
 import {
   evaluateMissionRequestSchema,
+  evaluateMissionResponseSchema,
   MISSION_STEPS,
   type EvaluateMissionRequest,
   type EvaluateMissionResponse,
@@ -107,7 +108,10 @@ export function createEvaluatePost(dependencies: {
       if (!dependencies.evaluateMission) return json(missionError("internal_error"), 503);
 
       try {
-        return json(await dependencies.evaluateMission(parsed.data), 200, "no-store");
+        const result = evaluateMissionResponseSchema.parse(
+          await dependencies.evaluateMission(parsed.data),
+        );
+        return json(result, 200, "no-store");
       } catch (error) {
         if (error instanceof ModerationUnavailableError) {
           return json(missionError("moderation_unavailable"), 503);

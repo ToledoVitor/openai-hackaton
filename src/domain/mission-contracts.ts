@@ -1,10 +1,13 @@
 import { z } from "zod";
 
+import { LEARNING_MISSION_IDS } from "./learning-journey";
+
 export const MISSION_IDS = [
   "new_school",
   "safe_path",
   "unexpected_event",
   "city_school",
+  ...LEARNING_MISSION_IDS,
 ] as const;
 export type MissionId = (typeof MISSION_IDS)[number];
 
@@ -13,6 +16,9 @@ export const MISSION_STEP_IDS = [
   "response_plan",
   "creative_design",
   "critical_instructions",
+  "plan",
+  "prioritize",
+  "diagnose",
 ] as const;
 export type MissionStepId = (typeof MISSION_STEP_IDS)[number];
 
@@ -27,6 +33,9 @@ export const MISSION_STEPS: Readonly<Record<MissionId, readonly MissionStepId[]>
   safe_path: ["design"],
   unexpected_event: ["response_plan"],
   city_school: ["creative_design", "critical_instructions"],
+  apartment_construction: ["plan"],
+  hospital_construction: ["prioritize"],
+  urban_repair: ["diagnose"],
 };
 
 export const MISSION_PATHS: Readonly<Record<MissionId, readonly string[]>> = {
@@ -34,6 +43,9 @@ export const MISSION_PATHS: Readonly<Record<MissionId, readonly string[]>> = {
   safe_path: ["smart_signals", "calm_green_street"],
   unexpected_event: ["water_first", "garbage_first"],
   city_school: ["ai_lab", "reading_plaza"],
+  apartment_construction: ["balanced_housing"],
+  hospital_construction: ["emergency_ready"],
+  urban_repair: ["mobility_then_sanitation", "sanitation_then_mobility"],
 };
 
 export const effectKeys = [
@@ -57,6 +69,9 @@ export const effectKeys = [
   "project_constraints_missing", "ai_lab_incomplete",
   "reading_plaza_incomplete", "ai_lab_complete", "reading_plaza_complete",
   "temperature_mastered",
+  "housing_plan_incomplete", "housing_complete",
+  "hospital_plan_incomplete", "hospital_complete",
+  "urban_diagnosis_incomplete", "urban_repaired",
 ] as const;
 export type EffectKey = (typeof effectKeys)[number];
 
@@ -152,27 +167,52 @@ export type TemperatureTrial =
       errorCode: "temperature_generation_unavailable";
     };
 
-export type EvaluateMissionResponse = {
-  missionId: MissionId;
-  stepId: MissionStepId;
-  language: Language;
-  source: "live" | "fallback";
-  status: "redirected" | "retry" | "partial" | "success";
-  choice: string | null;
-  progress: {
-    satisfied: string[];
-    newlySatisfied: string[];
-    missing: string[];
-  };
-  teachingConcept: string;
-  feedback: {
-    summary: string;
-    explanation: string;
-    nextInstruction: string | null;
-  };
-  effectKeys: EffectKey[];
-  temperatureTrial?: TemperatureTrial;
-};
+const temperatureTrialSchema = z.discriminatedUnion("status", [
+  z.object({
+    status: z.literal("generated"),
+    choice: temperatureChoiceSchema,
+    value: z.union([z.literal(0.2), z.literal(0.7), z.literal(1.2)]),
+    generatedOutput: z.string(),
+    observationKey: z.enum([
+      "creative_variety",
+      "creative_too_repetitive",
+      "critical_consistency",
+      "critical_too_unpredictable",
+    ]),
+    errorCode: z.null(),
+  }).strict(),
+  z.object({
+    status: z.literal("unavailable"),
+    choice: temperatureChoiceSchema,
+    value: z.union([z.literal(0.2), z.literal(0.7), z.literal(1.2)]),
+    generatedOutput: z.null(),
+    observationKey: z.null(),
+    errorCode: z.literal("temperature_generation_unavailable"),
+  }).strict(),
+]);
+
+export const evaluateMissionResponseSchema = z.object({
+  missionId: missionIdSchema,
+  stepId: missionStepIdSchema,
+  language: languageSchema,
+  source: z.enum(["live", "fallback"]),
+  status: z.enum(["redirected", "retry", "partial", "success"]),
+  choice: z.string().nullable(),
+  progress: z.object({
+    satisfied: z.array(z.string()),
+    newlySatisfied: z.array(z.string()),
+    missing: z.array(z.string()),
+  }).strict(),
+  teachingConcept: z.string().min(1),
+  feedback: z.object({
+    summary: z.string().min(1),
+    explanation: z.string().min(1),
+    nextInstruction: z.string().min(1).nullable(),
+  }).strict(),
+  effectKeys: z.array(z.enum(effectKeys)),
+  temperatureTrial: temperatureTrialSchema.optional(),
+}).strict();
+export type EvaluateMissionResponse = z.infer<typeof evaluateMissionResponseSchema>;
 
 export type EvaluationErrorCode =
   | "invalid_request"

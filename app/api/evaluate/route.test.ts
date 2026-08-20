@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { EvaluationRequest, TurnResult } from "../../../src/domain/contracts";
+import type { EvaluateMissionRequest, EvaluateMissionResponse } from "../../../src/domain/mission-contracts";
 import { ModerationUnavailableError } from "../../../src/server/evaluation/errors";
 import { createEvaluatePost, POST } from "./route";
 
@@ -20,6 +21,37 @@ const validResult: TurnResult = {
   citizenLine: "A step-free entrance welcomes every neighbor.",
   nextHint: "requireClearSign",
   celebration: false,
+};
+
+const validMissionRequest: EvaluateMissionRequest = {
+  missionId: "apartment_construction",
+  stepId: "plan",
+  language: "english",
+  prompt: "Build accessible housing for neighborhood families.",
+  attempt: 1,
+  satisfiedCriteria: [],
+  safetyIdentifier: "install_1234567890abcdef",
+};
+
+const validMissionResult: EvaluateMissionResponse = {
+  missionId: "apartment_construction",
+  stepId: "plan",
+  language: "english",
+  source: "fallback",
+  status: "partial",
+  choice: "balanced_housing",
+  progress: {
+    satisfied: ["housing_goal_clear"],
+    newlySatisfied: ["housing_goal_clear"],
+    missing: ["housing_budget_defined"],
+  },
+  teachingConcept: "Goals and constraints",
+  feedback: {
+    summary: "Plan improved.",
+    explanation: "Budget remains.",
+    nextInstruction: "Provide a budget.",
+  },
+  effectKeys: ["housing_plan_incomplete"],
 };
 
 function request(body: string): Request {
@@ -101,6 +133,39 @@ describe("createEvaluatePost", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(JSON.parse(body)).toEqual(validResult);
+    expect(body).not.toContain("sk-project-secret");
+  });
+
+  it("returns only a schema-validated mission result", async () => {
+    const post = createEvaluatePost({
+      evaluate: async () => validResult,
+      evaluateMission: async () => validMissionResult,
+    });
+
+    const response = await post(request(JSON.stringify(validMissionRequest)));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    await expect(response.json()).resolves.toEqual(validMissionResult);
+  });
+
+  it("sanitizes malformed mission evaluator output", async () => {
+    const post = createEvaluatePost({
+      evaluate: async () => validResult,
+      evaluateMission: async () => ({
+        ...validMissionResult,
+        providerDebug: "sk-project-secret stack trace",
+      }) as EvaluateMissionResponse,
+    });
+
+    const response = await post(request(JSON.stringify(validMissionRequest)));
+    const body = await response.text();
+
+    expect(response.status).toBe(500);
+    expect(JSON.parse(body)).toEqual({
+      error: { code: "internal_error", message: "internal_error", retryable: true },
+    });
+    expect(body).not.toContain("providerDebug");
     expect(body).not.toContain("sk-project-secret");
   });
 });
