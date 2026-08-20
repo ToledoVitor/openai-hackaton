@@ -1,7 +1,8 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 import {
-  LEARNING_MISSION_IDS,
+  canonicalCompletedMissionIds,
+  isCanonicalCompletedMissionIds,
   type LearningMissionId,
 } from "../../domain/learning-journey";
 
@@ -18,11 +19,6 @@ type ReceiptPayload = {
   completedMissionIds: LearningMissionId[];
 };
 
-function isOrderedPrefix(ids: readonly string[]): ids is LearningMissionId[] {
-  return ids.length <= LEARNING_MISSION_IDS.length &&
-    ids.every((id, index) => id === LEARNING_MISSION_IDS[index]);
-}
-
 export function createProgressAuthority(secret: string): ProgressAuthority {
   if (secret.length < 8) throw new Error("Progress signing secret is too short.");
   const signingKey = createHmac("sha256", secret).update("ai-city-progress-v1").digest();
@@ -30,11 +26,15 @@ export function createProgressAuthority(secret: string): ProgressAuthority {
 
   return {
     issue(safetyIdentifier, completedMissionIds) {
-      if (!isOrderedPrefix(completedMissionIds)) throw new Error("Invalid completed mission prefix.");
+      if (new Set(completedMissionIds).size !== completedMissionIds.length) {
+        throw new Error("Completed missions must be unique.");
+      }
+      const canonicalIds = canonicalCompletedMissionIds(completedMissionIds);
+      if (canonicalIds.length !== completedMissionIds.length) throw new Error("Invalid completed mission set.");
       const payload = Buffer.from(JSON.stringify({
         version: 1,
         safetyIdentifier,
-        completedMissionIds,
+        completedMissionIds: canonicalIds,
       } satisfies ReceiptPayload)).toString("base64url");
       return `${payload}.${sign(payload)}`;
     },
@@ -49,7 +49,7 @@ export function createProgressAuthority(secret: string): ProgressAuthority {
         if (typeof parsed !== "object" || parsed === null) return null;
         const value = parsed as Partial<ReceiptPayload>;
         if (value.version !== 1 || value.safetyIdentifier !== safetyIdentifier) return null;
-        if (!Array.isArray(value.completedMissionIds) || !isOrderedPrefix(value.completedMissionIds)) return null;
+        if (!Array.isArray(value.completedMissionIds) || !isCanonicalCompletedMissionIds(value.completedMissionIds)) return null;
         return { completedMissionIds: [...value.completedMissionIds] };
       } catch {
         return null;

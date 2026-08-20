@@ -1,10 +1,16 @@
 import type { RealtimeSessionRequest } from '../domain/mission-contracts';
 import { requestRealtimeCredential } from '../client/realtime-credential';
+import { classifyVoiceFailure, type VoiceUiState } from './voice-state';
 
 type VoiceCallbacks = {
-  onState: (state: 'connecting' | 'listening' | 'speaking' | 'error' | 'closed') => void;
+  onState: (state: Exclude<VoiceUiState, 'ready'> | 'closed') => void;
   onMayorText: (text: string) => void;
   onPrompt: (prompt: string) => Promise<unknown>;
+};
+
+type RealtimeVoiceDependencies = {
+  getUserMedia: (constraints: MediaStreamConstraints) => Promise<MediaStream>;
+  requestCredential: typeof requestRealtimeCredential;
 };
 
 type RealtimeEvent = {
@@ -26,6 +32,9 @@ export class RealtimeVoice {
   private audio: HTMLAudioElement | null = null;
   private callbacks: VoiceCallbacks | null = null;
   private transcript = '';
+  private connectionId = 0;
+
+  constructor(private readonly dependencies: Partial<RealtimeVoiceDependencies> = {}) {}
 
   isConnected() {
     return this.channel?.readyState === 'open';
@@ -33,11 +42,27 @@ export class RealtimeVoice {
 
   async connect(playerName: string, session: RealtimeSessionRequest, callbacks: VoiceCallbacks) {
     if (this.isConnected()) return;
+    const connectionId = ++this.connectionId;
     this.callbacks = callbacks;
     callbacks.onState('connecting');
 
     try {
-      const token = await requestRealtimeCredential(session);
+      const getUserMedia = this.dependencies.getUserMedia
+        ?? navigator.mediaDevices?.getUserMedia?.bind(navigator.mediaDevices);
+      if (!getUserMedia) {
+        callbacks.onState('unavailable');
+        return;
+      }
+      const stream = await getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      });
+      if (connectionId !== this.connectionId) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+      this.stream = stream;
+      const token = await (this.dependencies.requestCredential ?? requestRealtimeCredential)(session);
+      if (connectionId !== this.connectionId) return;
 
       const peer = new RTCPeerConnection();
       this.peer = peer;
@@ -51,10 +76,6 @@ export class RealtimeVoice {
         void audio.play().catch(() => undefined);
       };
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-      });
-      this.stream = stream;
       for (const track of stream.getAudioTracks()) peer.addTrack(track, stream);
 
       const channel = peer.createDataChannel('oai-events');
@@ -69,6 +90,7 @@ export class RealtimeVoice {
 
       const offer = await peer.createOffer();
       await peer.setLocalDescription(offer);
+      if (connectionId !== this.connectionId) return;
       const answerResponse = await fetch('https://api.openai.com/v1/realtime/calls', {
         method: 'POST',
         body: offer.sdp,
@@ -76,6 +98,7 @@ export class RealtimeVoice {
         signal: AbortSignal.timeout(10_000),
       });
       if (!answerResponse.ok) throw new Error('realtime_connection_failed');
+      if (connectionId !== this.connectionId) return;
       await peer.setRemoteDescription({ type: 'answer', sdp: await answerResponse.text() });
       await this.waitForChannel(channel);
 
@@ -90,13 +113,15 @@ export class RealtimeVoice {
         },
       });
       this.send({ type: 'response.create', response: { tool_choice: 'none' } });
-    } catch {
-      callbacks.onState('error');
+    } catch (error) {
+      if (connectionId !== this.connectionId) return;
+      callbacks.onState(classifyVoiceFailure(error));
       this.disconnect(false);
     }
   }
 
   disconnect(notify = true) {
+    this.connectionId += 1;
     this.stream?.getTracks().forEach((track) => track.stop());
     this.channel?.close();
     this.peer?.close();

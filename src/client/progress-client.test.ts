@@ -23,6 +23,8 @@ describe("verified progress client", () => {
     await expect(fetchVerifiedProgress({
       safetyIdentifier: "install_1234567890abcdef",
       progressReceipt: "signed.receipt",
-    }, { fetcher: async () => Response.json({ completedMissionIds: ["urban_repair"] }) })).rejects.toThrow("invalid_progress_response");
+    }, { fetcher: async () => Response.json({
+      completedMissionIds: ["urban_repair", "urban_repair"],
+    }) })).rejects.toThrow("invalid_progress_response");
   });
 });

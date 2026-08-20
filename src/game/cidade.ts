@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import type { LearningMissionId } from '../domain/learning-journey';
+import { BUILDING_PLACEMENTS, PASSIVE_DECOR_PLACEMENTS } from './city-layout';
 import { MISSION_SCENE_LOCATIONS, urbanProblemRemains } from './mission-scene';
 
 const BASE = '/assets/3d/cidade';
@@ -70,6 +71,7 @@ export class Cidade {
       predioG.scene, predioH.scene, predioA.scene.clone(), predioC.scene.clone(),
     ]);
     this.construirArborizacao();
+    this.construirEspacosPublicos(banco.scene, arbusto.scene, poste.scene);
     this.construirTransito(taxi.scene, sedan.scene, hatchback.scene);
     [
       [-12.5, 0.12, 3.1], [-1.5, 0.12, 3.1], [4.3, 0.12, 3.1],
@@ -349,13 +351,13 @@ export class Cidade {
   private construirBase() {
     const base = new THREE.Mesh(
       new THREE.BoxGeometry(80, 0.5, 80),
-      new THREE.MeshStandardMaterial({ color: 0xa6a79f, roughness: 1 }),
+      new THREE.MeshStandardMaterial({ color: 0x7f9f73, roughness: 1 }),
     );
     base.position.y = -0.31;
     base.receiveShadow = true;
     this.grupo.add(base);
 
-    const pisoUrbano = new THREE.MeshStandardMaterial({ color: 0xa8afa4, roughness: 1 });
+    const pisoUrbano = new THREE.MeshStandardMaterial({ color: 0x91b17f, roughness: 1 });
     const terra = new THREE.MeshStandardMaterial({ color: 0xa87952, roughness: 1 });
     const quarteiroes: Array<[number, number, number, number, THREE.Material]> = [
       [-7.4, -8.4, 23.6, 7.4, pisoUrbano],
@@ -526,30 +528,50 @@ export class Cidade {
   }
 
   private construirBairro(predios: THREE.Object3D[]) {
-    const lotes: Array<[number, number, number, number]> = [
-      [-13, -8.4, 2.15, 0], [-8, -8.6, 2.05, 0], [-3, -8.4, 2.25, 0],
-      [2, -8.5, 2.1, 0], [11, -8.4, 2.2, 0], [-14, -2.8, 2.05, Math.PI / 2],
-      [10.8, 8.7, 2.15, Math.PI], [14.3, 4.8, 1.9, -Math.PI / 2],
-      [-16.5, -27, 2.1, 0], [-10.5, -27.2, 2, 0], [-4.2, -27, 2.2, 0],
-      [1.3, -27.1, 1.9, 0], [-16.5, -34, 2, 0], [-10.5, -34.2, 2.15, 0],
-      [-4.2, -34, 1.95, 0], [1.3, -34.1, 2.1, 0],
-      [12.3, -27, 2.15, 0], [19, -27.2, 2, 0], [12.3, -34, 2, 0], [19, -34.1, 2.15, 0],
-      [31.2, -27, 2.2, 0], [36.4, -26.8, 1.9, 0], [31.2, -34, 2, 0], [36.4, -34, 2.1, 0],
-      [-32, -11.4, 2.15, Math.PI / 2], [-32, -5.2, 2, Math.PI / 2],
-      [33, -11.4, 2.2, -Math.PI / 2], [33, -5.2, 1.95, -Math.PI / 2],
-      [-32, 5.6, 2.1, Math.PI / 2], [-32, 12, 2, Math.PI / 2],
-      [19, 9.5, 2.05, Math.PI / 2], [15.5, 13, 1.9, 0],
-      [-35, 27, 2.1, Math.PI], [-29.5, 27, 2, Math.PI],
-      [-35, 34, 2, Math.PI], [-29.5, 34, 2.15, Math.PI],
-      [-16.2, 27, 2, Math.PI], [-9.7, 27.2, 2.2, Math.PI], [-3.2, 27, 1.95, Math.PI],
-      [-16.2, 34, 2.15, Math.PI], [-9.7, 34.2, 1.95, Math.PI], [-3.2, 34, 2.1, Math.PI],
-      [12.8, 35, 2, Math.PI], [19.2, 35, 2.1, Math.PI],
-      [31.5, 27, 2.1, Math.PI], [36.5, 26.8, 1.9, Math.PI],
-      [31.5, 34, 2, Math.PI], [36.5, 34, 2.15, Math.PI],
-    ];
-    lotes.forEach(([x, z, escala, rotacao], indice) => {
-      this.adicionarNoChao(predios[indice % predios.length].clone(), [x, 0.02, z], escala, rotacao);
+    BUILDING_PLACEMENTS.forEach(({ x, z, scale, rotationY, modelIndex }) => {
+      this.adicionarNoChao(predios[modelIndex % predios.length].clone(), [x, 0.02, z], scale, rotationY);
     });
+  }
+
+  private construirEspacosPublicos(banco: THREE.Object3D, arbusto: THREE.Object3D, poste: THREE.Object3D) {
+    const abrigo = new THREE.Group();
+    const estrutura = new THREE.MeshStandardMaterial({ color: 0x176f68, roughness: 0.78 });
+    const cobertura = new THREE.MeshStandardMaterial({ color: 0xffd566, roughness: 0.82 });
+    const vidro = new THREE.MeshStandardMaterial({ color: 0xb8e4e2, transparent: true, opacity: 0.62, roughness: 0.35 });
+    const teto = new THREE.Mesh(new THREE.BoxGeometry(3.1, 0.16, 1.2), cobertura);
+    teto.position.y = 2.25;
+    const fundo = new THREE.Mesh(new THREE.BoxGeometry(3, 1.9, 0.09), vidro);
+    fundo.position.set(0, 1.25, 0.48);
+    for (const x of [-1.38, 1.38]) {
+      const pilar = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.25, 0.12), estrutura);
+      pilar.position.set(x, 1.12, 0.42);
+      abrigo.add(pilar);
+    }
+    abrigo.add(teto, fundo);
+    this.adicionarNoChao(banco.clone(), [0, 0.08, 0.12], 1.65, Math.PI, abrigo);
+
+    for (const placement of PASSIVE_DECOR_PLACEMENTS) {
+      const source = placement.kind === 'bench' ? banco
+        : placement.kind === 'bush' ? arbusto
+          : placement.kind === 'streetlight' ? poste : abrigo;
+      const scale = placement.kind === 'bus_stop' ? 0.92 : placement.kind === 'bush' ? 1.8 : 2.05;
+      this.adicionarNoChao(source.clone(), [placement.x, 0.1, placement.z], scale, placement.rotationY);
+    }
+
+    const tufts = new THREE.InstancedMesh(
+      new THREE.ConeGeometry(0.09, 0.28, 5),
+      new THREE.MeshStandardMaterial({ color: 0x4f914f, roughness: 1 }),
+      36,
+    );
+    const matrix = new THREE.Matrix4();
+    for (let index = 0; index < 36; index += 1) {
+      const row = index < 18 ? -14.35 : 14.35;
+      const x = -19 + (index % 18) * 2.2;
+      matrix.makeTranslation(x, 0.2, row + (index % 2) * 0.18);
+      tufts.setMatrixAt(index, matrix);
+    }
+    tufts.castShadow = true;
+    this.grupo.add(tufts);
   }
 
   private construirArborizacao() {

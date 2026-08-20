@@ -36,6 +36,12 @@ const GameUi = memo(function GameUi() {
 
       <section className="projeto" aria-labelledby="missao-titulo">
         <nav className="lista-missoes" id="lista-missoes" aria-label="Missões de aprendizagem" />
+        <div className="escolha-missao" id="escolha-missao">
+          <span className="etiqueta" id="escolha-missao-etiqueta" />
+          <h1 id="escolha-missao-titulo" />
+          <p id="escolha-missao-ajuda" />
+        </div>
+        <div className="oculto" id="missao-conteudo">
         <div className="projeto-cabecalho">
           <span className="etiqueta" id="missao-indice" />
           <span className="estado-missao" id="estado-missao" />
@@ -47,7 +53,7 @@ const GameUi = memo(function GameUi() {
           <div><span id="rotulo-conceito" /><strong id="missao-conceito" /></div>
           <div><span id="rotulo-objetivo" /><p id="missao-objetivo" /></div>
           <div><span id="rotulo-resultado" /><p id="missao-resultado" /></div>
-          <div><span id="rotulo-prerequisito" /><p id="missao-prerequisito" /></div>
+          <div><span id="rotulo-proposito" /><p id="missao-proposito" /></div>
         </div>
 
         <div className="briefing">
@@ -71,7 +77,11 @@ const GameUi = memo(function GameUi() {
           <p className="dica-missao oculto" id="dica-missao" />
           <div className="voz-opcional">
             <button className="acao-secundaria" id="prompt-voz" type="button" />
-            <small id="voz-ajuda" />
+            <div className="voz-meta">
+              <strong id="voz-estado" role="status" aria-live="polite" />
+              <small id="voz-ajuda" />
+            </div>
+            <button className="acao-texto" id="voltar-texto" type="button" hidden />
           </div>
           <p id="prompt-status" role="status" aria-live="polite" />
         </form>
@@ -83,6 +93,7 @@ const GameUi = memo(function GameUi() {
           <p id="resultado-instrucao" />
           <button className="acao-principal oculto" id="proximo" type="button" />
         </section>
+        </div>
       </section>
 
       <aside className="npc-painel" aria-labelledby="rotulo-npc">

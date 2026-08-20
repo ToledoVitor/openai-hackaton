@@ -12,23 +12,18 @@ import {
 } from "./learning-journey";
 
 describe("learning journey", () => {
-  it("centralizes complete bilingual teaching metadata in prerequisite order", () => {
+  it("centralizes complete bilingual teaching metadata for independent missions", () => {
     expect(LEARNING_MISSIONS.map((mission) => mission.id)).toEqual([
       "apartment_construction",
       "hospital_construction",
       "urban_repair",
     ]);
-    expect(LEARNING_MISSIONS.map((mission) => mission.prerequisite)).toEqual([
-      null,
-      "apartment_construction",
-      "hospital_construction",
-    ]);
-
     for (const mission of LEARNING_MISSIONS) {
       for (const language of ["portuguese", "english"] as const) {
         const copy = localizeMission(mission.id, language);
         expect(Object.values(copy).every((value) => value.trim().length > 0)).toBe(true);
         expect(copy.objective).not.toBe(copy.expectedOutcome);
+        expect(copy.purpose).not.toBe(copy.objective);
       }
     }
   });
@@ -39,28 +34,31 @@ describe("learning journey", () => {
     );
   });
 
-  it("advances only after authoritative mission success", () => {
+  it("completes any chosen mission only after authoritative success", () => {
     const initial = createInitialJourneyState();
+    expect(initial.activeMissionId).toBeNull();
     expect(recommendNextMission(initial)).toBe("apartment_construction");
-    expect(getMissionAccess(initial, "hospital_construction")).toBe("locked");
+    expect(LEARNING_MISSIONS.map(({ id }) => getMissionAccess(initial, id))).toEqual([
+      "available", "available", "available",
+    ]);
 
-    const partial = completeLearningMission(initial, "apartment_construction", "partial");
+    const partial = completeLearningMission(initial, "hospital_construction", "partial");
     expect(partial.state).toEqual(initial);
     expect(partial.error).toBe("evaluation_incomplete");
 
-    const housingComplete = completeLearningMission(initial, "apartment_construction", "success");
-    expect(housingComplete.error).toBeNull();
-    expect(housingComplete.state.completedMissionIds).toEqual(["apartment_construction"]);
-    expect(housingComplete.state.activeMissionId).toBe("hospital_construction");
-    expect(recommendNextMission(housingComplete.state)).toBe("hospital_construction");
+    const hospitalComplete = completeLearningMission(initial, "hospital_construction", "success");
+    expect(hospitalComplete.error).toBeNull();
+    expect(hospitalComplete.state.completedMissionIds).toEqual(["hospital_construction"]);
+    expect(hospitalComplete.state.activeMissionId).toBe("hospital_construction");
+    expect(recommendNextMission(hospitalComplete.state)).toBe("apartment_construction");
   });
 
-  it("cannot select a locked prerequisite or unknown mission", () => {
+  it("selects any mission from start and rejects only unknown missions", () => {
     const initial = createInitialJourneyState();
 
     expect(selectLearningMission(initial, "hospital_construction")).toEqual({
-      state: initial,
-      error: "mission_locked",
+      state: { ...initial, activeMissionId: "hospital_construction" },
+      error: null,
     });
     expect(selectLearningMission(initial, "not-a-mission")).toEqual({
       state: initial,
@@ -68,7 +66,24 @@ describe("learning journey", () => {
     });
   });
 
-  it("recovers corrupted or inconsistent persisted state to longest valid prefix", () => {
+  it("preserves the player's current mission when another mission finishes asynchronously", () => {
+    const hospitalSelected = selectLearningMission(
+      createInitialJourneyState(),
+      "hospital_construction",
+    ).state;
+
+    const apartmentComplete = completeLearningMission(
+      hospitalSelected,
+      "apartment_construction",
+      "success",
+    );
+
+    expect(apartmentComplete.error).toBeNull();
+    expect(apartmentComplete.state.completedMissionIds).toEqual(["apartment_construction"]);
+    expect(apartmentComplete.state.activeMissionId).toBe("hospital_construction");
+  });
+
+  it("recovers persisted completion as a canonical independent set", () => {
     expect(parseJourneyState("not-json")).toEqual(createInitialJourneyState());
     expect(parseJourneyState(JSON.stringify({
       version: 1,
@@ -81,8 +96,13 @@ describe("learning journey", () => {
     });
     expect(parseJourneyState(JSON.stringify({
       version: 1,
+      completedMissionIds: ["hospital_construction", "hospital_construction", "unknown"],
+      activeMissionId: "hospital_construction",
+    }))).toEqual({
+      version: 1,
       completedMissionIds: ["hospital_construction"],
       activeMissionId: "hospital_construction",
-    }))).toEqual(createInitialJourneyState());
+    });
+    expect(parseJourneyState(JSON.stringify({ completedMissionIds: [] })).activeMissionId).toBeNull();
   });
 });

@@ -39,4 +39,11 @@ describe("deterministic city NPC dialogue", () => {
       expect(english.line).not.toBe(portuguese.line);
     }
   });
+
+  it("acknowledges only independently completed mission effects", () => {
+    const state = { ...createInitialJourneyState(), completedMissionIds: ["hospital_construction" as const] };
+    expect(getNpcDialogue("hospital_nurse", state, "english").state).toBe("improved");
+    expect(getNpcDialogue("housing_resident", state, "english").state).toBe("unsolved");
+    expect(getNpcDialogue("urban_guardian", state, "english").state).toBe("unsolved");
+  });
 });

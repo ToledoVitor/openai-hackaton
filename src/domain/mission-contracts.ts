@@ -223,7 +223,6 @@ export type EvaluationErrorCode =
   | "temperature_required"
   | "temperature_not_allowed"
   | "invalid_progress"
-  | "mission_locked"
   | "too_many_requests"
   | "moderation_unavailable"
   | "internal_error";

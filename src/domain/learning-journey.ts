@@ -9,6 +9,7 @@ export type LearningLanguage = "portuguese" | "english";
 
 export type LocalizedMissionMetadata = {
   title: string;
+  purpose: string;
   concept: string;
   objective: string;
   expectedOutcome: string;
@@ -20,7 +21,6 @@ export type LocalizedMissionMetadata = {
 
 export type LearningMissionDefinition = {
   id: LearningMissionId;
-  prerequisite: LearningMissionId | null;
   stepId: "plan" | "prioritize" | "diagnose";
   paths: readonly string[];
   criteria: readonly string[];
@@ -30,7 +30,6 @@ export type LearningMissionDefinition = {
 export const LEARNING_MISSIONS = [
   {
     id: "apartment_construction",
-    prerequisite: null,
     stepId: "plan",
     paths: ["balanced_housing"],
     criteria: [
@@ -44,6 +43,7 @@ export const LEARNING_MISSIONS = [
     copy: {
       portuguese: {
         title: "Moradia para o bairro",
+        purpose: "Praticar instruções claras para transformar necessidades de moradores em requisitos verificáveis.",
         concept: "Prompts claros: objetivo, público, requisitos e limites",
         objective: "Planejar apartamentos que atendam famílias do bairro sem ultrapassar o orçamento.",
         expectedOutcome: "Um conjunto residencial acessível, dimensionado, com área verde e custo definido.",
@@ -54,6 +54,7 @@ export const LEARNING_MISSIONS = [
       },
       english: {
         title: "Housing for the neighborhood",
+        purpose: "Practice clear instructions that turn resident needs into verifiable requirements.",
         concept: "Clear prompts: goal, audience, requirements, and limits",
         objective: "Plan apartments that serve neighborhood families without exceeding budget.",
         expectedOutcome: "An accessible, properly sized housing complex with green space and a defined cost.",
@@ -66,7 +67,6 @@ export const LEARNING_MISSIONS = [
   },
   {
     id: "hospital_construction",
-    prerequisite: "apartment_construction",
     stepId: "prioritize",
     paths: ["emergency_ready"],
     criteria: [
@@ -80,6 +80,7 @@ export const LEARNING_MISSIONS = [
     copy: {
       portuguese: {
         title: "Hospital pronto para cuidar",
+        purpose: "Praticar priorização responsável quando segurança, capacidade e urgência competem.",
         concept: "Priorização, segurança e critérios de sucesso",
         objective: "Definir um hospital seguro com atendimento prioritário e acesso rápido a emergências.",
         expectedOutcome: "Hospital com capacidade, fluxo de ambulâncias, serviços prioritários e indicadores de segurança.",
@@ -90,6 +91,7 @@ export const LEARNING_MISSIONS = [
       },
       english: {
         title: "A hospital ready to care",
+        purpose: "Practice responsible prioritization when safety, capacity, and urgency compete.",
         concept: "Prioritization, safety, and success criteria",
         objective: "Define a safe hospital with priority care and fast emergency access.",
         expectedOutcome: "A hospital with capacity, ambulance flow, priority services, and safety measures.",
@@ -102,7 +104,6 @@ export const LEARNING_MISSIONS = [
   },
   {
     id: "urban_repair",
-    prerequisite: "hospital_construction",
     stepId: "diagnose",
     paths: ["mobility_then_sanitation", "sanitation_then_mobility"],
     criteria: [
@@ -116,6 +117,7 @@ export const LEARNING_MISSIONS = [
     copy: {
       portuguese: {
         title: "Erros urbanos em campo",
+        purpose: "Praticar diagnóstico de causas e sequenciamento de correções urbanas seguras.",
         concept: "Diagnóstico, causa, correção e verificação",
         objective: "Diagnosticar travessias inseguras e lixo acumulado, depois ordenar correções seguras.",
         expectedOutcome: "Problemas corrigidos na ordem escolhida, com verificação de segurança e acompanhamento.",
@@ -126,6 +128,7 @@ export const LEARNING_MISSIONS = [
       },
       english: {
         title: "Urban errors in the field",
+        purpose: "Practice root-cause diagnosis and sequencing safe urban corrections.",
         concept: "Diagnosis, cause, correction, and verification",
         objective: "Diagnose unsafe crossings and accumulated waste, then order safe corrections.",
         expectedOutcome: "Problems fixed in chosen order, with a safety check and follow-up.",
@@ -150,7 +153,6 @@ export type JourneyState = {
 
 export type JourneyError =
   | "invalid_mission"
-  | "mission_locked"
   | "mission_already_complete"
   | "evaluation_incomplete";
 
@@ -161,7 +163,7 @@ export function isLearningMissionId(value: unknown): value is LearningMissionId 
 }
 
 export function createInitialJourneyState(): JourneyState {
-  return { version: 1, completedMissionIds: [], activeMissionId: LEARNING_MISSION_IDS[0] };
+  return { version: 1, completedMissionIds: [], activeMissionId: null };
 }
 
 export function recommendNextMission(state: JourneyState): LearningMissionId | null {
@@ -171,17 +173,13 @@ export function recommendNextMission(state: JourneyState): LearningMissionId | n
 export function getMissionAccess(
   state: JourneyState,
   missionId: LearningMissionId,
-): "available" | "locked" | "completed" {
+): "available" | "completed" {
   if (state.completedMissionIds.includes(missionId)) return "completed";
-  const prerequisite = missionById[missionId].prerequisite;
-  return prerequisite === null || state.completedMissionIds.includes(prerequisite)
-    ? "available"
-    : "locked";
+  return "available";
 }
 
 export function selectLearningMission(state: JourneyState, missionId: unknown): JourneyResult {
   if (!isLearningMissionId(missionId)) return { state, error: "invalid_mission" };
-  if (getMissionAccess(state, missionId) === "locked") return { state, error: "mission_locked" };
   return { state: { ...state, activeMissionId: missionId }, error: null };
 }
 
@@ -192,13 +190,15 @@ export function completeLearningMission(
 ): JourneyResult {
   if (!isLearningMissionId(missionId)) return { state, error: "invalid_mission" };
   const access = getMissionAccess(state, missionId);
-  if (access === "locked") return { state, error: "mission_locked" };
   if (access === "completed") return { state, error: "mission_already_complete" };
   if (evaluationStatus !== "success") return { state, error: "evaluation_incomplete" };
 
-  const completedMissionIds = canonicalCompleted([...state.completedMissionIds, missionId]);
-  const completedState: JourneyState = { version: 1, completedMissionIds, activeMissionId: null };
-  completedState.activeMissionId = recommendNextMission(completedState);
+  const completedMissionIds = canonicalCompletedMissionIds([...state.completedMissionIds, missionId]);
+  const completedState: JourneyState = {
+    version: 1,
+    completedMissionIds,
+    activeMissionId: state.activeMissionId ?? missionId,
+  };
   return { state: completedState, error: null };
 }
 
@@ -215,9 +215,13 @@ export function parseJourneyState(serialized: string | null | undefined): Journe
     }
     const rawCompleted = (value as { completedMissionIds?: unknown }).completedMissionIds;
     if (!Array.isArray(rawCompleted)) return createInitialJourneyState();
-    const completedMissionIds = canonicalCompleted(rawCompleted);
-    const state: JourneyState = { version: 1, completedMissionIds, activeMissionId: null };
-    state.activeMissionId = recommendNextMission(state);
+    const completedMissionIds = canonicalCompletedMissionIds(rawCompleted);
+    const rawActive = (value as { activeMissionId?: unknown }).activeMissionId;
+    const state: JourneyState = {
+      version: 1,
+      completedMissionIds,
+      activeMissionId: isLearningMissionId(rawActive) ? rawActive : null,
+    };
     return state;
   } catch {
     return createInitialJourneyState();
@@ -248,14 +252,15 @@ export function getLearningMission(missionId: LearningMissionId): LearningMissio
   return missionById[missionId];
 }
 
-function canonicalCompleted(values: readonly unknown[]): LearningMissionId[] {
+export function canonicalCompletedMissionIds(values: readonly unknown[]): LearningMissionId[] {
   const included = new Set(values.filter(isLearningMissionId));
-  const completed: LearningMissionId[] = [];
-  for (const missionId of LEARNING_MISSION_IDS) {
-    if (!included.has(missionId)) break;
-    completed.push(missionId);
-  }
-  return completed;
+  return LEARNING_MISSION_IDS.filter((missionId) => included.has(missionId));
+}
+
+export function isCanonicalCompletedMissionIds(values: readonly unknown[]): values is LearningMissionId[] {
+  if (new Set(values).size !== values.length) return false;
+  const canonical = canonicalCompletedMissionIds(values);
+  return canonical.length === values.length && canonical.every((missionId, index) => values[index] === missionId);
 }
 
 function humanizeIdentifier(value: string): string {

@@ -178,29 +178,46 @@ describe("createEvaluatePost", () => {
     expect(received?.selectedChoice).toBeUndefined();
   });
 
-  it("enforces signed learning prerequisites and issues next progress receipt", async () => {
+  it("accepts any learning mission and issues signed independent progress", async () => {
     const authority = {
-      verify: () => null,
+      verify: (receipt: string) => receipt === "signed:apartment_construction"
+        ? { completedMissionIds: ["apartment_construction" as const] }
+        : null,
       issue: (_safetyIdentifier: string, completedMissionIds: readonly string[]) => `signed:${completedMissionIds.join(",")}`,
     };
     const post = createEvaluatePost({
       evaluate: async () => validResult,
-      evaluateMission: async () => ({ ...validMissionResult, status: "success", effectKeys: ["housing_complete"] }),
+      evaluateMission: async (missionRequest) => ({
+        ...validMissionResult,
+        missionId: missionRequest.missionId,
+        stepId: missionRequest.stepId,
+        status: "success",
+        effectKeys: [],
+      }),
       progressAuthority: authority,
     });
 
-    const locked = await post(request(JSON.stringify({
+    const hospital = await post(request(JSON.stringify({
       ...validMissionRequest,
       missionId: "hospital_construction",
       stepId: "prioritize",
     })));
-    expect(locked.status).toBe(409);
+    expect(hospital.status).toBe(200);
+    await expect(hospital.json()).resolves.toMatchObject({
+      status: "success",
+      progressReceipt: "signed:hospital_construction",
+    });
 
-    const completed = await post(request(JSON.stringify(validMissionRequest)));
+    const completed = await post(request(JSON.stringify({
+      ...validMissionRequest,
+      missionId: "urban_repair",
+      stepId: "diagnose",
+      progressReceipt: "signed:apartment_construction",
+    })));
     expect(completed.status).toBe(200);
     await expect(completed.json()).resolves.toMatchObject({
       status: "success",
-      progressReceipt: "signed:apartment_construction",
+      progressReceipt: "signed:apartment_construction,urban_repair",
     });
   });
 

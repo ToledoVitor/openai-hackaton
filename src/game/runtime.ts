@@ -4,6 +4,7 @@ import { evaluateMissionOnServer, ClientEvaluationError } from '../client/evalua
 import { getOrCreateInstallationId } from '../client/installation-id';
 import {
   clearProgressReceipt,
+  loadJourneyState,
   loadProgressReceipt,
   saveJourneyState,
   saveProgressReceipt,
@@ -12,7 +13,6 @@ import { getStoredLanguage, LANGUAGE_CHANGE_EVENT } from '../client/language';
 import { fetchVerifiedProgress } from '../client/progress-client';
 import { uiText } from '../client/ui-copy';
 import {
-  completeLearningMission,
   createInitialJourneyState,
   getLearningMission,
   getMissionAccess,
@@ -27,10 +27,15 @@ import {
 import type { EvaluateMissionResponse, Language } from '../domain/mission-contracts';
 import { getNpcDialogue, getNpcForMission, NPC_IDS, type NpcId } from '../domain/npc-dialogue';
 import { Cidade } from './cidade';
+import { EXPLORER_OBSTACLES } from './city-layout';
+import { deriveCityState } from './city-state';
 import type { PlayerProfile } from './entrada';
 import { moveExplorer, movementFromKeys, type ExplorerBounds } from './exploration';
-import { RealtimeVoice } from './realtime';
+import { createLazyVoice } from './lazy-voice';
+import { resolveMissionEvaluation } from './mission-evaluation-state';
 import { MISSION_SCENE_LOCATIONS } from './mission-scene';
+import { voicePresentation, type VoiceUiState } from './voice-state';
+import { createVoiceScope, stopVoiceInteraction } from './voice-scope';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#cidade')!;
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -61,12 +66,18 @@ controles.update();
 
 const cidade = new Cidade();
 cena.add(cidade.grupo);
-const voice = new RealtimeVoice();
+const lazyVoice = createLazyVoice();
+const voiceScope = createVoiceScope();
 const installationId = getOrCreateInstallationId(window.localStorage, window.crypto);
 
 const ui = {
   project: document.querySelector<HTMLElement>('.projeto')!,
   missionList: document.querySelector<HTMLElement>('#lista-missoes')!,
+  missionChoice: document.querySelector<HTMLElement>('#escolha-missao')!,
+  missionChoiceLabel: document.querySelector<HTMLElement>('#escolha-missao-etiqueta')!,
+  missionChoiceTitle: document.querySelector<HTMLElement>('#escolha-missao-titulo')!,
+  missionChoiceHelp: document.querySelector<HTMLElement>('#escolha-missao-ajuda')!,
+  missionContent: document.querySelector<HTMLElement>('#missao-conteudo')!,
   index: document.querySelector<HTMLElement>('#missao-indice')!,
   missionState: document.querySelector<HTMLElement>('#estado-missao')!,
   title: document.querySelector<HTMLElement>('#missao-titulo')!,
@@ -74,7 +85,7 @@ const ui = {
   concept: document.querySelector<HTMLElement>('#missao-conceito')!,
   objective: document.querySelector<HTMLElement>('#missao-objetivo')!,
   expected: document.querySelector<HTMLElement>('#missao-resultado')!,
-  prerequisite: document.querySelector<HTMLElement>('#missao-prerequisito')!,
+  purpose: document.querySelector<HTMLElement>('#missao-proposito')!,
   briefing: document.querySelector<HTMLElement>('#missao-briefing')!,
   hint: document.querySelector<HTMLElement>('#dica-missao')!,
   form: document.querySelector<HTMLFormElement>('#prompt-form')!,
@@ -82,7 +93,9 @@ const ui = {
   submit: document.querySelector<HTMLButtonElement>('#avaliar-plano')!,
   showHint: document.querySelector<HTMLButtonElement>('#mostrar-dica')!,
   voice: document.querySelector<HTMLButtonElement>('#prompt-voz')!,
+  voiceState: document.querySelector<HTMLElement>('#voz-estado')!,
   voiceHelp: document.querySelector<HTMLElement>('#voz-ajuda')!,
+  voiceReturn: document.querySelector<HTMLButtonElement>('#voltar-texto')!,
   promptStatus: document.querySelector<HTMLElement>('#prompt-status')!,
   result: document.querySelector<HTMLElement>('#resultado')!,
   resultTitle: document.querySelector<HTMLElement>('#resultado-titulo')!,
@@ -112,7 +125,7 @@ const labels = {
   '#estado-titulo': 'city_status', '#rotulo-dia': 'day', '#rotulo-orcamento': 'budget',
   '#rotulo-bem-estar': 'city_health', '#rotulo-recomendada': 'recommended_next',
   '#rotulo-conceito': 'mission_concept', '#rotulo-objetivo': 'mission_objective',
-  '#rotulo-resultado': 'expected_outcome', '#rotulo-prerequisito': 'prerequisite',
+  '#rotulo-resultado': 'expected_outcome', '#rotulo-proposito': 'mission_purpose',
   '#rotulo-briefing': 'briefing', '#rotulo-plano': 'your_plan', '#rotulo-feedback': 'feedback',
   '#rotulo-npc': 'npc_issue', '#ajuda-exploracao': 'explore_help',
 } as const;
@@ -120,11 +133,12 @@ const labels = {
 let language: Language = getStoredLanguage(window.localStorage);
 let profile: PlayerProfile = { name: '', language };
 let journey: JourneyState = createInitialJourneyState();
-let activeMissionId: LearningMissionId = journey.activeMissionId ?? LEARNING_MISSION_IDS.at(-1)!;
+let activeMissionId: LearningMissionId | null = journey.activeMissionId;
 let progressReceipt = loadProgressReceipt(window.localStorage);
 let selectedNpc: NpcId = 'housing_resident';
 let lastResponse: EvaluateMissionResponse | null = null;
 let evaluating = false;
+let voiceState: VoiceUiState = 'ready';
 let gameStarted = false;
 let noticeTimer = 0;
 let elapsed = 0;
@@ -134,15 +148,12 @@ const choices = new Map<LearningMissionId, string>();
 
 const explorerBounds: ExplorerBounds = {
   minX: -35, maxX: 35, minZ: -35, maxZ: 35,
-  obstacles: [
-    { minX: -18, maxX: -10, minZ: 3, maxZ: 12 },
-    { minX: 10, maxX: 18, minZ: -1, maxZ: 7 },
-  ],
+  obstacles: EXPLORER_OBSTACLES,
 };
 const explorer = new THREE.Vector3(0, 1.1, 0);
 const pressedKeys = new Set<string>();
 
-function missionIndex(missionId = activeMissionId) {
+function missionIndex(missionId: LearningMissionId) {
   return LEARNING_MISSION_IDS.indexOf(missionId);
 }
 
@@ -151,14 +162,12 @@ function updateCityEffects() {
 }
 
 function updateCityState() {
-  const completed = journey.completedMissionIds.length;
-  const spent = [450_000, 780_000, 160_000].slice(0, completed).reduce((sum, value) => sum + value, 0);
-  const budget = 2_400_000 - spent;
+  const state = deriveCityState(journey.completedMissionIds);
   const locale = language === 'portuguese' ? 'pt-BR' : 'en-US';
-  ui.complete.textContent = `${completed} / ${LEARNING_MISSION_IDS.length}`;
-  ui.day.textContent = String(1 + completed);
-  ui.budget.textContent = new Intl.NumberFormat(locale, { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(budget);
-  ui.health.textContent = `${72 + completed * 8}%`;
+  ui.complete.textContent = `${state.completed} / ${LEARNING_MISSION_IDS.length}`;
+  ui.day.textContent = String(state.day);
+  ui.budget.textContent = new Intl.NumberFormat(locale, { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(state.budget);
+  ui.health.textContent = `${state.health}%`;
   const recommended = recommendNextMission(journey);
   ui.recommended.textContent = recommended
     ? localizeMission(recommended, language).title
@@ -166,6 +175,7 @@ function updateCityState() {
 }
 
 function updateProgress() {
+  if (!activeMissionId) return;
   const completed = journey.completedMissionIds.length;
   const definition = getLearningMission(activeMissionId);
   const missionCriteria = criteria.get(activeMissionId) ?? [];
@@ -188,9 +198,8 @@ function renderMissionList() {
     button.dataset.missionId = missionId;
     button.classList.toggle('ativo', missionId === activeMissionId);
     button.classList.toggle('concluida', access === 'completed');
-    button.disabled = access === 'locked';
-    button.textContent = `${index + 1}. ${copy.title}${access === 'locked' ? ' · 🔒' : access === 'completed' ? ' · ✓' : ''}`;
-    button.title = access === 'locked' ? uiText(language, 'locked') : copy.objective;
+    button.textContent = `${index + 1}. ${copy.title}${access === 'completed' ? ' · ✓' : ''}`;
+    button.title = copy.purpose;
     button.addEventListener('click', () => selectMission(missionId));
     ui.missionList.append(button);
   });
@@ -226,7 +235,7 @@ function renderLanguage() {
   ui.submit.textContent = uiText(language, evaluating ? 'evaluating' : 'submit_plan');
   ui.showHint.textContent = uiText(language, 'hint');
   ui.voiceHelp.textContent = uiText(language, 'voice_optional');
-  ui.voice.textContent = uiText(language, voice.isConnected() ? 'stop_voice' : 'start_voice');
+  renderVoice();
   ui.overview.textContent = uiText(language, 'camera_overview');
   ui.focus.textContent = uiText(language, 'camera_mission');
   ui.loadingText.textContent = uiText(language, 'loading_city');
@@ -234,22 +243,43 @@ function renderLanguage() {
   renderNpc();
 }
 
+function renderVoice() {
+  const copy = voicePresentation(language, voiceState);
+  ui.voice.textContent = copy.action;
+  ui.voiceState.textContent = copy.status;
+  ui.voice.disabled = voiceState === 'connecting' || voiceState === 'unavailable';
+  ui.voiceReturn.textContent = copy.returnToText;
+  ui.voiceReturn.hidden = voiceState === 'ready';
+  ui.voice.dataset.state = voiceState;
+}
+
 function renderMission() {
+  renderMissionList();
+  updateCityState();
+  if (!activeMissionId) {
+    ui.missionChoice.classList.remove('oculto');
+    ui.missionContent.classList.add('oculto');
+    ui.missionChoiceLabel.textContent = uiText(language, 'choose_mission_label');
+    ui.missionChoiceTitle.textContent = uiText(language, 'choose_mission');
+    ui.missionChoiceHelp.textContent = uiText(language, 'choose_mission_help');
+    ui.project.setAttribute('aria-label', uiText(language, 'choose_mission'));
+    return;
+  }
+  ui.missionChoice.classList.add('oculto');
+  ui.missionContent.classList.remove('oculto');
+  ui.project.removeAttribute('aria-label');
   const copy = localizeMission(activeMissionId, language);
-  const definition = getLearningMission(activeMissionId);
   const access = getMissionAccess(journey, activeMissionId);
-  ui.index.textContent = `${language === 'portuguese' ? 'Missão' : 'Mission'} ${missionIndex() + 1} / ${LEARNING_MISSION_IDS.length}`;
+  ui.index.textContent = `${language === 'portuguese' ? 'Missão' : 'Mission'} ${missionIndex(activeMissionId) + 1} / ${LEARNING_MISSION_IDS.length}`;
   ui.missionState.textContent = access === 'completed'
     ? (language === 'portuguese' ? 'Concluída' : 'Complete')
-    : access === 'locked' ? uiText(language, 'locked') : (language === 'portuguese' ? 'Disponível' : 'Available');
+    : (language === 'portuguese' ? 'Disponível' : 'Available');
   ui.title.textContent = copy.title;
   ui.person.textContent = language === 'portuguese' ? `Prefeito ${profile.name || ''}` : `Mayor ${profile.name || ''}`;
   ui.concept.textContent = copy.concept;
   ui.objective.textContent = copy.objective;
   ui.expected.textContent = copy.expectedOutcome;
-  ui.prerequisite.textContent = definition.prerequisite
-    ? localizeMission(definition.prerequisite, language).title
-    : uiText(language, 'no_prerequisite');
+  ui.purpose.textContent = copy.purpose;
   ui.briefing.textContent = copy.briefing;
   ui.hint.textContent = copy.hint;
   ui.hint.classList.add('oculto');
@@ -261,8 +291,6 @@ function renderMission() {
     ui.resultInstruction.textContent = copy.nextStep;
     ui.next.classList.add('oculto');
   }
-  renderMissionList();
-  updateCityState();
   updateProgress();
   cidade.prepararMissao(activeMissionId);
 }
@@ -270,10 +298,12 @@ function renderMission() {
 function selectMission(missionId: LearningMissionId) {
   const selection = selectLearningMission(journey, missionId);
   if (selection.error) {
-    showNotice(uiText(language, selection.error === 'mission_locked' ? 'locked' : 'error_invalid_request'));
+    showNotice(uiText(language, 'error_invalid_request'));
     return false;
   }
+  voiceState = stopVoiceInteraction(voiceScope, window.cidadeAudio);
   journey = selection.state;
+  saveJourneyState(window.localStorage, journey);
   activeMissionId = missionId;
   selectedNpc = getNpcForMission(missionId);
   lastResponse = null;
@@ -296,73 +326,87 @@ function errorMessage(error: unknown) {
 }
 
 async function submitPlan(prompt: string): Promise<EvaluateMissionResponse | { error: string }> {
-  if (evaluating || getMissionAccess(journey, activeMissionId) !== 'available') {
+  if (!activeMissionId || evaluating || getMissionAccess(journey, activeMissionId) !== 'available') {
     return { error: 'mission_unavailable' };
   }
+  const missionId = activeMissionId;
+  const requestLanguage = language;
   evaluating = true;
+  renderMissionList();
   ui.submit.disabled = true;
   ui.submit.textContent = uiText(language, 'evaluating');
   ui.promptStatus.textContent = uiText(language, 'evaluating');
-  const attempt = (attempts.get(activeMissionId) ?? 0) + 1;
-  attempts.set(activeMissionId, attempt);
+  const attempt = (attempts.get(missionId) ?? 0) + 1;
+  attempts.set(missionId, attempt);
 
   try {
-    const definition = getLearningMission(activeMissionId);
+    const definition = getLearningMission(missionId);
     const response = await evaluateMissionOnServer({
-      missionId: activeMissionId,
+      missionId,
       stepId: definition.stepId,
-      language,
+      language: requestLanguage,
       prompt,
       attempt,
-      satisfiedCriteria: criteria.get(activeMissionId) ?? [],
-      ...(choices.has(activeMissionId) ? { selectedChoice: choices.get(activeMissionId)! } : {}),
+      satisfiedCriteria: criteria.get(missionId) ?? [],
+      ...(choices.has(missionId) ? { selectedChoice: choices.get(missionId)! } : {}),
       safetyIdentifier: installationId,
       ...(progressReceipt ? { progressReceipt } : {}),
     });
-    lastResponse = response;
-    criteria.set(activeMissionId, response.progress.satisfied);
-    if (response.choice) choices.set(activeMissionId, response.choice);
-    ui.result.classList.remove('oculto');
-    ui.resultTitle.textContent = response.feedback.summary;
-    ui.resultText.textContent = response.feedback.explanation;
-    ui.resultInstruction.textContent = response.feedback.nextInstruction ?? '';
-    ui.promptStatus.textContent = response.feedback.summary;
+    criteria.set(missionId, response.progress.satisfied);
+    if (response.choice) choices.set(missionId, response.choice);
     const success = response.status === 'success';
-    ui.next.classList.toggle('oculto', !success);
-    ui.next.textContent = recommendNextMission(journey) === null
-      ? uiText(language, 'journey_complete') : uiText(language, 'next_mission');
+    const resolved = resolveMissionEvaluation({
+      journey,
+      requestMissionId: missionId,
+      requestLanguage,
+      currentLanguage: language,
+      status: response.status,
+    });
 
     if (success) {
       progressReceipt = response.progressReceipt;
       saveProgressReceipt(window.localStorage, progressReceipt!);
-      const completion = completeLearningMission(journey, activeMissionId, response.status);
-      if (!completion.error) {
-        journey = completion.state;
+      if (!resolved.completionError) {
+        journey = resolved.journey;
         saveJourneyState(window.localStorage, journey);
-        cidade.aplicarEscolha(activeMissionId);
-        ui.resultText.textContent = `${response.feedback.explanation} ${localizeMission(activeMissionId, language).feedback}`;
-        ui.resultInstruction.textContent = localizeMission(activeMissionId, language).nextStep;
-        ui.form.classList.add('oculto');
+        cidade.aplicarEscolha(missionId);
         renderMissionList();
         updateCityState();
         updateProgress();
         renderNpc();
-        ui.next.textContent = recommendNextMission(journey) === null
-          ? uiText(language, 'journey_complete') : uiText(language, 'next_mission');
       }
+    }
+    if (resolved.shouldPresent) {
+      lastResponse = response;
+      ui.result.classList.remove('oculto');
+      ui.resultTitle.textContent = response.feedback.summary;
+      ui.resultText.textContent = success
+        ? `${response.feedback.explanation} ${localizeMission(missionId, language).feedback}`
+        : response.feedback.explanation;
+      ui.resultInstruction.textContent = success
+        ? localizeMission(missionId, language).nextStep
+        : (response.feedback.nextInstruction ?? '');
+      ui.promptStatus.textContent = response.feedback.summary;
+      ui.next.classList.toggle('oculto', !success);
+      ui.next.textContent = recommendNextMission(journey) === null
+        ? uiText(language, 'journey_complete') : uiText(language, 'next_mission');
+      if (success) ui.form.classList.add('oculto');
     }
     return response;
   } catch (error) {
     const message = errorMessage(error);
-    ui.promptStatus.textContent = message;
-    ui.result.classList.remove('oculto');
-    ui.resultTitle.textContent = uiText(language, 'feedback');
-    ui.resultText.textContent = message;
-    ui.resultInstruction.textContent = uiText(language, 'retry');
-    ui.next.classList.add('oculto');
+    if (activeMissionId === missionId && language === requestLanguage) {
+      ui.promptStatus.textContent = message;
+      ui.result.classList.remove('oculto');
+      ui.resultTitle.textContent = uiText(language, 'feedback');
+      ui.resultText.textContent = message;
+      ui.resultInstruction.textContent = uiText(language, 'retry');
+      ui.next.classList.add('oculto');
+    }
     return { error: error instanceof ClientEvaluationError ? error.code : 'unknown' };
   } finally {
     evaluating = false;
+    renderMissionList();
     ui.submit.disabled = false;
     ui.submit.textContent = uiText(language, 'submit_plan');
   }
@@ -380,8 +424,10 @@ function advanceMission() {
 }
 
 function resetGame() {
+  voiceState = stopVoiceInteraction(voiceScope, window.cidadeAudio);
   journey = createInitialJourneyState();
-  activeMissionId = journey.activeMissionId!;
+  activeMissionId = null;
+  selectedNpc = 'housing_resident';
   attempts.clear();
   criteria.clear();
   choices.clear();
@@ -391,7 +437,7 @@ function resetGame() {
   clearProgressReceipt(window.localStorage);
   cidade.reiniciar();
   renderLanguage();
-  focusMission();
+  overview();
   return true;
 }
 
@@ -403,14 +449,16 @@ function showNotice(message: string) {
 }
 
 function focusMission() {
+  if (!activeMissionId) return false;
   const location = MISSION_SCENE_LOCATIONS[activeMissionId];
   camera.position.fromArray(location.cameraPosition);
   controles.target.fromArray(location.cameraTarget);
-  explorer.copy(controles.target);
+  explorer.set(location.explorerStart[0], 1.1, location.explorerStart[1]);
   controles.update();
   cidade.destacar();
   ui.focus.classList.add('ativo');
   ui.overview.classList.remove('ativo');
+  return true;
 }
 
 function overview() {
@@ -431,34 +479,62 @@ ui.showHint.addEventListener('click', () => ui.hint.classList.toggle('oculto'));
 ui.next.addEventListener('click', advanceMission);
 ui.overview.addEventListener('click', overview);
 ui.focus.addEventListener('click', focusMission);
-ui.voice.addEventListener('click', () => {
-  if (voice.isConnected()) {
-    voice.disconnect();
-    ui.voice.textContent = uiText(language, 'start_voice');
+ui.voice.addEventListener('click', async () => {
+  const currentVoice = lazyVoice.current();
+  if (currentVoice?.isConnected()) {
+    voiceState = stopVoiceInteraction(voiceScope, window.cidadeAudio);
+    renderVoice();
     return;
   }
-  const definition = getLearningMission(activeMissionId);
-  void voice.connect(profile.name, {
-    missionId: activeMissionId,
-    stepId: definition.stepId,
-    language,
-    attempt: (attempts.get(activeMissionId) ?? 0) + 1,
-    satisfiedCriteria: criteria.get(activeMissionId) ?? [],
-    ...(choices.has(activeMissionId) ? { selectedChoice: choices.get(activeMissionId)! } : {}),
-    safetyIdentifier: installationId,
-  }, {
-    onState: (state) => {
-      if (state === 'speaking') window.cidadeAudio?.beginVoice();
-      else window.cidadeAudio?.endVoice();
-      ui.voice.textContent = uiText(language, state === 'closed' || state === 'error' ? 'start_voice' : 'stop_voice');
-      if (state === 'error') ui.promptStatus.textContent = uiText(language, 'error_provider_unavailable');
-    },
-    onMayorText: (text) => { ui.promptStatus.textContent = text; },
-    onPrompt: async (prompt) => {
-      ui.prompt.value = prompt;
-      return submitPlan(prompt);
-    },
-  });
+  if (!activeMissionId) return;
+  const missionId = activeMissionId;
+  voiceState = 'connecting';
+  const scopeToken = voiceScope.begin(missionId);
+  renderVoice();
+  const definition = getLearningMission(missionId);
+  try {
+    const voice = await lazyVoice.get();
+    if (!voiceScope.attach(scopeToken, voice)) return;
+    await voice.connect(profile.name, {
+      missionId,
+      stepId: definition.stepId,
+      language,
+      attempt: (attempts.get(missionId) ?? 0) + 1,
+      satisfiedCriteria: criteria.get(missionId) ?? [],
+      ...(choices.has(missionId) ? { selectedChoice: choices.get(missionId)! } : {}),
+      safetyIdentifier: installationId,
+    }, {
+      onState: (state) => {
+        if (!voiceScope.isCurrent(scopeToken, missionId)) return;
+        voiceState = state === 'closed' ? 'ready' : state;
+        if (state === 'speaking') window.cidadeAudio?.beginVoice();
+        else window.cidadeAudio?.endVoice();
+        renderVoice();
+        if (state === 'error' || state === 'permission_denied' || state === 'unavailable') {
+          ui.promptStatus.textContent = voicePresentation(language, voiceState).status;
+        }
+      },
+      onMayorText: (text) => {
+        if (voiceScope.isCurrent(scopeToken, missionId)) ui.promptStatus.textContent = text;
+      },
+      onPrompt: async (prompt) => {
+        if (!activeMissionId || !voiceScope.isCurrent(scopeToken, activeMissionId)) {
+          return { error: 'voice_scope_changed' };
+        }
+        ui.prompt.value = prompt;
+        return submitPlan(prompt);
+      },
+    });
+  } catch {
+    voiceState = 'unavailable';
+    renderVoice();
+    ui.promptStatus.textContent = voicePresentation(language, voiceState).status;
+  }
+});
+ui.voiceReturn.addEventListener('click', () => {
+  voiceState = stopVoiceInteraction(voiceScope, window.cidadeAudio);
+  renderVoice();
+  ui.prompt.focus();
 });
 
 window.addEventListener(LANGUAGE_CHANGE_EVENT, (event) => {
@@ -466,7 +542,7 @@ window.addEventListener(LANGUAGE_CHANGE_EVENT, (event) => {
   profile.language = language;
   lastResponse = null;
   ui.promptStatus.textContent = '';
-  voice.disconnect(false);
+  voiceState = stopVoiceInteraction(voiceScope, window.cidadeAudio);
   renderLanguage();
 });
 
@@ -487,7 +563,7 @@ canvas.addEventListener('click', (event) => {
   pointer.y = -(event.clientY / innerHeight) * 2 + 1;
   raycaster.setFromCamera(pointer, camera);
   if (raycaster.intersectObjects(cidade.alvosNpc, true).length > 0) {
-    renderNpc(getNpcForMission(activeMissionId));
+    if (activeMissionId) renderNpc(getNpcForMission(activeMissionId));
     return;
   }
   if (raycaster.intersectObjects(cidade.alvosProjeto, true).length > 0) {
@@ -535,20 +611,24 @@ export async function start(playerProfile: PlayerProfile) {
   profile = playerProfile;
   language = playerProfile.language;
   try {
+    const localJourney = loadJourneyState(window.localStorage);
     const verified = await fetchVerifiedProgress({
       safetyIdentifier: installationId,
       ...(progressReceipt ? { progressReceipt } : {}),
     });
-    journey = parseJourneyState(JSON.stringify({ completedMissionIds: verified.completedMissionIds }));
-    activeMissionId = journey.activeMissionId ?? LEARNING_MISSION_IDS.at(-1)!;
-    selectedNpc = getNpcForMission(activeMissionId);
+    journey = parseJourneyState(JSON.stringify({
+      completedMissionIds: verified.completedMissionIds,
+      activeMissionId: localJourney.activeMissionId,
+    }));
+    activeMissionId = journey.activeMissionId;
+    if (activeMissionId) selectedNpc = getNpcForMission(activeMissionId);
     progressReceipt = verified.progressReceipt;
     if (progressReceipt) saveProgressReceipt(window.localStorage, progressReceipt);
     else clearProgressReceipt(window.localStorage);
     saveJourneyState(window.localStorage, journey);
   } catch {
     journey = createInitialJourneyState();
-    activeMissionId = journey.activeMissionId!;
+    activeMissionId = null;
   }
   renderLanguage();
   await cidade.construir();
@@ -558,7 +638,8 @@ export async function start(playerProfile: PlayerProfile) {
   gameStarted = true;
   controles.enabled = true;
   renderLanguage();
-  focusMission();
+  if (activeMissionId) focusMission();
+  else overview();
 }
 
 (window as unknown as { cidadeViva: unknown }).cidadeViva = {

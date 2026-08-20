@@ -25,4 +25,11 @@ describe("bilingual interface copy", () => {
       expect(uiText("portuguese", key)).not.toBe(uiText("english", key));
     }
   });
+
+  it("explains independent mission choice without prerequisite language", () => {
+    expect(uiText("english", "mission_purpose")).toBe("Why choose this mission");
+    expect(uiText("portuguese", "mission_purpose")).toBe("Por que escolher esta missão");
+    expect(REQUIRED_UI_KEYS).not.toContain("locked");
+    expect(REQUIRED_UI_KEYS).not.toContain("prerequisite");
+  });
 });

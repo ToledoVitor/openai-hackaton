@@ -14,7 +14,7 @@ import {
   type EvaluationErrorResponse,
 } from "../../../src/domain/mission-contracts";
 import {
-  LEARNING_MISSION_IDS,
+  canonicalCompletedMissionIds,
   isLearningMissionId,
   type LearningMissionId,
 } from "../../../src/domain/learning-journey";
@@ -124,9 +124,6 @@ export function createEvaluatePost(dependencies: {
           if (!verified) return json(missionError("invalid_progress"), 400);
           completedMissionIds = verified.completedMissionIds;
         }
-        if (LEARNING_MISSION_IDS[completedMissionIds.length] !== parsed.data.missionId) {
-          return json(missionError("mission_locked"), 409);
-        }
       }
 
       try {
@@ -148,7 +145,7 @@ export function createEvaluatePost(dependencies: {
               ...evaluated,
               progressReceipt: dependencies.progressAuthority?.issue(
                 parsed.data.safetyIdentifier,
-                [...completedMissionIds, evaluated.missionId],
+                canonicalCompletedMissionIds([...completedMissionIds, evaluated.missionId]),
               ),
             }
           : evaluated;
