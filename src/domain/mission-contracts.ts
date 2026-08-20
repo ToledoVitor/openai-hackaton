@@ -94,6 +94,7 @@ const missionContextSchema = z
     satisfiedCriteria: satisfiedCriteriaSchema,
     selectedChoice: z.string().trim().min(1).max(80).optional(),
     safetyIdentifier: safetyIdentifierSchema,
+    progressReceipt: z.string().min(10).max(2048).optional(),
   })
   .strict()
   .superRefine((value, context) => {
@@ -211,6 +212,7 @@ export const evaluateMissionResponseSchema = z.object({
   }).strict(),
   effectKeys: z.array(z.enum(effectKeys)),
   temperatureTrial: temperatureTrialSchema.optional(),
+  progressReceipt: z.string().min(10).max(2048).optional(),
 }).strict();
 export type EvaluateMissionResponse = z.infer<typeof evaluateMissionResponseSchema>;
 
@@ -220,6 +222,8 @@ export type EvaluationErrorCode =
   | "invalid_mission_step"
   | "temperature_required"
   | "temperature_not_allowed"
+  | "invalid_progress"
+  | "mission_locked"
   | "too_many_requests"
   | "moderation_unavailable"
   | "internal_error";

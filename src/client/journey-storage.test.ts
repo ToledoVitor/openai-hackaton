@@ -5,6 +5,9 @@ import {
   JOURNEY_STORAGE_KEY,
   loadJourneyState,
   saveJourneyState,
+  loadProgressReceipt,
+  saveProgressReceipt,
+  clearProgressReceipt,
 } from "./journey-storage";
 
 describe("journey storage", () => {
@@ -13,6 +16,7 @@ describe("journey storage", () => {
     const storage = {
       getItem: (key: string) => values.get(key) ?? null,
       setItem: (key: string, value: string) => values.set(key, value),
+      removeItem: (key: string) => values.delete(key),
     };
     const state = {
       version: 1 as const,
@@ -23,6 +27,20 @@ describe("journey storage", () => {
     expect(saveJourneyState(storage, state)).toBe(true);
     expect(values.has(JOURNEY_STORAGE_KEY)).toBe(true);
     expect(loadJourneyState(storage)).toEqual(state);
+  });
+
+  it("stores only an opaque server progress receipt beside display state", () => {
+    const values = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+      removeItem: (key: string) => values.delete(key),
+    };
+
+    expect(saveProgressReceipt(storage, "signed.receipt")).toBe(true);
+    expect(loadProgressReceipt(storage)).toBe("signed.receipt");
+    expect(clearProgressReceipt(storage)).toBe(true);
+    expect(loadProgressReceipt(storage)).toBeUndefined();
   });
 
   it("recovers safely when storage is unavailable or throws", () => {

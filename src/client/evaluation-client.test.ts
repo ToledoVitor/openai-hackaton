@@ -75,6 +75,18 @@ describe("evaluateMissionOnServer", () => {
     expect(String(error)).not.toContain("sk-project-secret");
   });
 
+  it("rejects learning mission success without a server progress receipt", async () => {
+    const fetcher = async () => Response.json({
+      ...result,
+      status: "success",
+      effectKeys: ["housing_complete"],
+    });
+
+    await expect(evaluateMissionOnServer(request, { fetcher })).rejects.toMatchObject({
+      code: "invalid_response",
+    });
+  });
+
   it("maps offline and timeout failures to recoverable client codes", async () => {
     const offline = async () => Promise.reject(new TypeError("Failed to fetch private URL"));
     const timeout = async () => Promise.reject(new DOMException("provider stack", "TimeoutError"));

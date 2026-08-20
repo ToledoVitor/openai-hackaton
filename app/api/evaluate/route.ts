@@ -13,6 +13,11 @@ import {
   type EvaluationErrorCode,
   type EvaluationErrorResponse,
 } from "../../../src/domain/mission-contracts";
+import {
+  LEARNING_MISSION_IDS,
+  isLearningMissionId,
+  type LearningMissionId,
+} from "../../../src/domain/learning-journey";
 import { EvaluationError, ModerationUnavailableError } from "../../../src/server/evaluation/errors";
 import {
   evaluateMissionPrompt,
@@ -26,6 +31,7 @@ import {
 import {
   readJsonWithLimit,
 } from "../../../src/server/guardrails";
+import { createProgressAuthority, type ProgressAuthority } from "../../../src/server/progress/progress-receipt";
 
 export const runtime = "nodejs";
 
@@ -89,6 +95,7 @@ function invalidMissionRequest(body: unknown): EvaluationErrorResponse {
 export function createEvaluatePost(dependencies: {
   evaluate: Evaluate;
   evaluateMission?: EvaluateMission;
+  progressAuthority?: ProgressAuthority;
 }) {
   return async function post(request: Request): Promise<Response> {
     let body: unknown;
@@ -107,14 +114,49 @@ export function createEvaluatePost(dependencies: {
       if (!parsed.success) return json(invalidMissionRequest(body), 400);
       if (!dependencies.evaluateMission) return json(missionError("internal_error"), 503);
 
+      let completedMissionIds: LearningMissionId[] = [];
+      if (isLearningMissionId(parsed.data.missionId)) {
+        if (parsed.data.progressReceipt) {
+          const verified = dependencies.progressAuthority?.verify(
+            parsed.data.progressReceipt,
+            parsed.data.safetyIdentifier,
+          );
+          if (!verified) return json(missionError("invalid_progress"), 400);
+          completedMissionIds = verified.completedMissionIds;
+        }
+        if (LEARNING_MISSION_IDS[completedMissionIds.length] !== parsed.data.missionId) {
+          return json(missionError("mission_locked"), 409);
+        }
+      }
+
       try {
         const authoritativeRequest: EvaluateMissionRequest = {
           ...parsed.data,
           satisfiedCriteria: [],
         };
         delete authoritativeRequest.selectedChoice;
+        const evaluated = await dependencies.evaluateMission(authoritativeRequest);
+        if (
+          evaluated.missionId !== parsed.data.missionId ||
+          evaluated.stepId !== parsed.data.stepId ||
+          evaluated.language !== parsed.data.language
+        ) {
+          return json(missionError("internal_error"), 500);
+        }
+        const withProgress = evaluated.status === "success" && isLearningMissionId(evaluated.missionId)
+          ? {
+              ...evaluated,
+              progressReceipt: dependencies.progressAuthority?.issue(
+                parsed.data.safetyIdentifier,
+                [...completedMissionIds, evaluated.missionId],
+              ),
+            }
+          : evaluated;
+        if (evaluated.status === "success" && isLearningMissionId(evaluated.missionId) && !withProgress.progressReceipt) {
+          return json(missionError("internal_error"), 503);
+        }
         const result = evaluateMissionResponseSchema.parse(
-          await dependencies.evaluateMission(authoritativeRequest),
+          withProgress,
         );
         return json(result, 200, "no-store");
       } catch (error) {
@@ -169,6 +211,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const gateway = createOpenAIEvaluationGateway(apiKey);
   const temperatureClient = createTemperatureClient(apiKey);
+  const progressAuthority = createProgressAuthority(apiKey);
 
   return createEvaluatePost({
     evaluate: (evaluationRequest) =>
@@ -184,5 +227,6 @@ export async function POST(request: Request): Promise<Response> {
           run: (request) => runTemperatureTrial({ request, client: temperatureClient }),
         },
       }),
+    progressAuthority,
   })(request);
 }

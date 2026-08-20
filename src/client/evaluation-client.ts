@@ -74,5 +74,8 @@ export async function evaluateMissionOnServer(
 
   const parsed = evaluateMissionResponseSchema.safeParse(body);
   if (!parsed.success) throw new ClientEvaluationError("invalid_response");
+  if (parsed.data.status === "success" && !parsed.data.progressReceipt) {
+    throw new ClientEvaluationError("invalid_response");
+  }
   return parsed.data;
 }

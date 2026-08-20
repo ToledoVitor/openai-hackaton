@@ -178,6 +178,32 @@ describe("createEvaluatePost", () => {
     expect(received?.selectedChoice).toBeUndefined();
   });
 
+  it("enforces signed learning prerequisites and issues next progress receipt", async () => {
+    const authority = {
+      verify: () => null,
+      issue: (_safetyIdentifier: string, completedMissionIds: readonly string[]) => `signed:${completedMissionIds.join(",")}`,
+    };
+    const post = createEvaluatePost({
+      evaluate: async () => validResult,
+      evaluateMission: async () => ({ ...validMissionResult, status: "success", effectKeys: ["housing_complete"] }),
+      progressAuthority: authority,
+    });
+
+    const locked = await post(request(JSON.stringify({
+      ...validMissionRequest,
+      missionId: "hospital_construction",
+      stepId: "prioritize",
+    })));
+    expect(locked.status).toBe(409);
+
+    const completed = await post(request(JSON.stringify(validMissionRequest)));
+    expect(completed.status).toBe(200);
+    await expect(completed.json()).resolves.toMatchObject({
+      status: "success",
+      progressReceipt: "signed:apartment_construction",
+    });
+  });
+
   it("sanitizes malformed mission evaluator output", async () => {
     const post = createEvaluatePost({
       evaluate: async () => validResult,
@@ -196,5 +222,25 @@ describe("createEvaluatePost", () => {
     });
     expect(body).not.toContain("providerDebug");
     expect(body).not.toContain("sk-project-secret");
+  });
+
+  it("rejects a schema-valid mission result that is not bound to the request", async () => {
+    const post = createEvaluatePost({
+      evaluate: async () => validResult,
+      evaluateMission: async () => ({
+        ...validMissionResult,
+        missionId: "hospital_construction",
+        stepId: "prioritize",
+      }),
+      progressAuthority: {
+        verify: () => null,
+        issue: () => "signed.receipt",
+      },
+    });
+
+    const response = await post(request(JSON.stringify(validMissionRequest)));
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toMatchObject({ error: { code: "internal_error" } });
   });
 });

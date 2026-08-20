@@ -2,8 +2,14 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { evaluateMissionOnServer, ClientEvaluationError } from '../client/evaluation-client';
 import { getOrCreateInstallationId } from '../client/installation-id';
-import { loadJourneyState, saveJourneyState } from '../client/journey-storage';
+import {
+  clearProgressReceipt,
+  loadProgressReceipt,
+  saveJourneyState,
+  saveProgressReceipt,
+} from '../client/journey-storage';
 import { getStoredLanguage, LANGUAGE_CHANGE_EVENT } from '../client/language';
+import { fetchVerifiedProgress } from '../client/progress-client';
 import { uiText } from '../client/ui-copy';
 import {
   completeLearningMission,
@@ -12,6 +18,7 @@ import {
   getMissionAccess,
   LEARNING_MISSION_IDS,
   localizeMission,
+  parseJourneyState,
   recommendNextMission,
   selectLearningMission,
   type JourneyState,
@@ -112,8 +119,9 @@ const labels = {
 
 let language: Language = getStoredLanguage(window.localStorage);
 let profile: PlayerProfile = { name: '', language };
-let journey: JourneyState = loadJourneyState(window.localStorage);
+let journey: JourneyState = createInitialJourneyState();
 let activeMissionId: LearningMissionId = journey.activeMissionId ?? LEARNING_MISSION_IDS.at(-1)!;
+let progressReceipt = loadProgressReceipt(window.localStorage);
 let selectedNpc: NpcId = 'housing_resident';
 let lastResponse: EvaluateMissionResponse | null = null;
 let evaluating = false;
@@ -308,6 +316,7 @@ async function submitPlan(prompt: string): Promise<EvaluateMissionResponse | { e
       satisfiedCriteria: criteria.get(activeMissionId) ?? [],
       ...(choices.has(activeMissionId) ? { selectedChoice: choices.get(activeMissionId)! } : {}),
       safetyIdentifier: installationId,
+      ...(progressReceipt ? { progressReceipt } : {}),
     });
     lastResponse = response;
     criteria.set(activeMissionId, response.progress.satisfied);
@@ -323,6 +332,8 @@ async function submitPlan(prompt: string): Promise<EvaluateMissionResponse | { e
       ? uiText(language, 'journey_complete') : uiText(language, 'next_mission');
 
     if (success) {
+      progressReceipt = response.progressReceipt;
+      saveProgressReceipt(window.localStorage, progressReceipt!);
       const completion = completeLearningMission(journey, activeMissionId, response.status);
       if (!completion.error) {
         journey = completion.state;
@@ -375,6 +386,8 @@ function resetGame() {
   choices.clear();
   lastResponse = null;
   saveJourneyState(window.localStorage, journey);
+  progressReceipt = undefined;
+  clearProgressReceipt(window.localStorage);
   cidade.reiniciar();
   renderLanguage();
   focusMission();
@@ -526,6 +539,21 @@ function animate() {
 }
 
 async function start() {
+  try {
+    const verified = await fetchVerifiedProgress({
+      safetyIdentifier: installationId,
+      ...(progressReceipt ? { progressReceipt } : {}),
+    });
+    journey = parseJourneyState(JSON.stringify({ completedMissionIds: verified.completedMissionIds }));
+    activeMissionId = journey.activeMissionId ?? LEARNING_MISSION_IDS.at(-1)!;
+    progressReceipt = verified.progressReceipt;
+    if (progressReceipt) saveProgressReceipt(window.localStorage, progressReceipt);
+    else clearProgressReceipt(window.localStorage);
+    saveJourneyState(window.localStorage, journey);
+  } catch {
+    journey = createInitialJourneyState();
+    activeMissionId = journey.activeMissionId!;
+  }
   renderLanguage();
   try {
     await cidade.construir();
