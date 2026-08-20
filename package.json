@@ -35,7 +35,7 @@
     "eslint": "latest",
     "eslint-config-next": "latest",
     "react-server-dom-webpack": "19.2.8",
-    "typescript": "7.0.2",
+    "typescript": "6.0.3",
     "vinext": "1.0.0-beta.7",
     "vite": "8.2.1",
     "vitest": "4.1.11",
