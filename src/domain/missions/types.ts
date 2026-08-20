@@ -13,6 +13,7 @@ export type MissionDefinition = {
   criteriaByStep: Readonly<Record<string, readonly string[]>>;
   choiceCriterion: string;
   choiceDependentCriteria?: readonly string[];
+  invalidatedWhenMissing?: Readonly<Record<string, readonly string[]>>;
   teachingConcept: Readonly<Record<Language, string>>;
   instructions: Readonly<Record<Language, string>>;
   failureEffectByCriterion: Readonly<Record<string, EffectKey>>;

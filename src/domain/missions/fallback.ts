@@ -139,6 +139,20 @@ export function fallbackMissionExtraction(request: EvaluateMissionRequest): Miss
     if (containsAny(text, words(["monitorar", "semanalmente", "acompanhar"], ["monitor", "weekly", "follow-up"]))) met.add("urban_followup_defined");
   }
 
+  if (request.missionId === "school_construction") {
+    choice = selectChoice(text, {
+      school_hub: words(["polo escolar"], ["school hub"]),
+      school_greenway: words(["corredor verde"], ["greenway"]),
+    });
+    if (containsAny(text, words(["escola"], ["school"]))) met.add("school_goal_clear");
+    if (containsAny(text, words(["publica", "alunos", "familias", "comunidade"], ["public", "students", "families", "community"]))) met.add("school_public_defined");
+    if (choice || containsAny(text, words(["local", "bairro", "terreno"], ["location", "neighborhood", "site"]))) met.add("school_location_defined");
+    if (/\b\d+\b/.test(text) && containsAny(text, words(["sala", "capacidade", "alunos"], ["classroom", "capacity", "students"]))) met.add("school_scale_defined");
+    if (containsAny(text, words(["porta acessivel", "entrada acessivel", "rampa"], ["accessible door", "accessible entrance", "step-free"]))) met.add("school_accessible");
+    if (containsAny(text, words(["travessia segura", "seguranca", "iluminacao"], ["secure crossing", "safe crossing", "safety", "lighting"]))) met.add("school_safety_defined");
+    if (choice) met.add("school_site_selected");
+  }
+
   return {
     offTopic: false,
     choice,

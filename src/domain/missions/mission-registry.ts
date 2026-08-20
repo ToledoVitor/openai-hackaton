@@ -43,6 +43,7 @@ export const missionDefinitions: Readonly<Record<MissionId, MissionDefinition>> 
     },
     choiceCriterion: "school_branch_selected",
     choiceDependentCriteria: ["school_branch_feature_defined"],
+    invalidatedWhenMissing: { school_branch_selected: ["school_branch_feature_defined"] },
     teachingConcept: {
       portuguese: "Objetivo, contexto, escala e restrições",
       english: "Goal, context, scale, and constraints",
@@ -90,6 +91,7 @@ export const missionDefinitions: Readonly<Record<MissionId, MissionDefinition>> 
     },
     choiceCriterion: "path_branch_selected",
     choiceDependentCriteria: ["path_branch_requirements_defined"],
+    invalidatedWhenMissing: { path_branch_selected: ["path_branch_requirements_defined"] },
     teachingConcept: {
       portuguese: "Exemplos e critérios verificáveis",
       english: "Examples and verifiable criteria",
@@ -136,6 +138,7 @@ export const missionDefinitions: Readonly<Record<MissionId, MissionDefinition>> 
     },
     choiceCriterion: "service_priority_selected",
     choiceDependentCriteria: ["priority_reasoned"],
+    invalidatedWhenMissing: { service_priority_selected: ["priority_reasoned"] },
     teachingConcept: {
       portuguese: "Decomposição, prioridade, sequência e revisão",
       english: "Decomposition, priority, sequence, and review",
@@ -187,6 +190,7 @@ export const missionDefinitions: Readonly<Record<MissionId, MissionDefinition>> 
     },
     choiceCriterion: "city_school_project_selected",
     choiceDependentCriteria: ["project_constraints_defined"],
+    invalidatedWhenMissing: { city_school_project_selected: ["project_constraints_defined"] },
     teachingConcept: {
       portuguese: "Temperatura: criatividade e precisão",
       english: "Temperature: creativity and precision",
@@ -253,6 +257,7 @@ export const missionDefinitions: Readonly<Record<MissionId, MissionDefinition>> 
     criteriaByStep: { diagnose: urbanRepair.criteria },
     choiceCriterion: "urban_priority_defined",
     choiceDependentCriteria: ["urban_corrections_ordered"],
+    invalidatedWhenMissing: { urban_priority_defined: ["urban_corrections_ordered"] },
     teachingConcept: {
       portuguese: urbanRepair.copy.portuguese.concept,
       english: urbanRepair.copy.english.concept,

@@ -123,6 +123,8 @@ export async function evaluateMissionPrompt(
     ...(temperatureTrial ? { temperatureTrial } : {}),
   });
   if (source === "fallback") {
+    const definition = getMissionDefinition(request.missionId);
+    const preserved = definition.criteria.filter((criterion) => request.satisfiedCriteria.includes(criterion));
     const feedback = request.language === "portuguese"
       ? {
           summary: "A avaliação está indisponível no momento.",
@@ -138,6 +140,12 @@ export async function evaluateMissionPrompt(
     return {
       ...result,
       status: "retry",
+      progress: {
+        satisfied: preserved,
+        newlySatisfied: [],
+        regressed: [],
+        missing: definition.criteria.filter((criterion) => !preserved.includes(criterion)),
+      },
       feedback,
       effectKeys: ["evaluation_unavailable_no_change"],
     };
