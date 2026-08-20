@@ -2,6 +2,7 @@
 
 import { memo, useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { createAudioManager, DEFAULT_AUDIO_PREFERENCES, type AudioPreferences } from '@/src/audio';
+import { AUDIO_PREFERENCES_CHANGE_EVENT } from '@/src/audio/entryAudioControls';
 import { BrandWordmark } from '@/src/client/brand-wordmark';
 import { getStoredLanguage, LANGUAGE_CHANGE_EVENT, setPlayerLanguage } from '@/src/client/language';
 import { uiText } from '@/src/client/ui-copy';
@@ -126,7 +127,11 @@ export default function HomePage() {
 
   useEffect(() => {
     const onLanguage = (event: Event) => setLanguage((event as CustomEvent<Language>).detail);
+    const onAudioPreferences = (event: Event) => {
+      setAudioPreferences({ ...(event as CustomEvent<AudioPreferences>).detail });
+    };
     window.addEventListener(LANGUAGE_CHANGE_EVENT, onLanguage);
+    window.addEventListener(AUDIO_PREFERENCES_CHANGE_EVENT, onAudioPreferences);
     const audio = createAudioManager();
     audioRef.current = audio;
     window.cidadeAudio = audio;
@@ -134,16 +139,12 @@ export default function HomePage() {
       setLanguage(getStoredLanguage(window.localStorage));
       setAudioPreferences({ ...audio.getPreferences() });
     });
-    const startAudio = () => audio.start();
-    window.addEventListener('pointerdown', startAudio, { once: true });
-    window.addEventListener('keydown', startAudio, { once: true });
     void import('@/src/game/main');
 
     return () => {
       window.removeEventListener(LANGUAGE_CHANGE_EVENT, onLanguage);
+      window.removeEventListener(AUDIO_PREFERENCES_CHANGE_EVENT, onAudioPreferences);
       window.cancelAnimationFrame(frame);
-      window.removeEventListener('pointerdown', startAudio);
-      window.removeEventListener('keydown', startAudio);
       audio.stop();
       delete window.cidadeAudio;
     };

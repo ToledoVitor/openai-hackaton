@@ -79,6 +79,16 @@ TDD evidence: unresolved entry test failed against previous DOM-eager module, th
 - Deferred runtime greatly reduces initial JavaScript, but post-entry Three.js/game chunk remains 724,662 B raw. Model bytes and low-end mobile parse/render time need future profiling.
 - Real provider quality and live Realtime audio still need explicit human testing with an operator-provided key; automated and agent-run validation intentionally stays offline.
 
+## Entry city and explicit sound revision
+
+The entry now uses a source-only procedural streetscape: CSS buildings, trees, roadway, and depth replace the gradient-only field without adding media, dependencies, or asset-license risk. The CSS wordmark is lower at desktop/mobile breakpoints, and the outlined start action has a larger vertical gap before its explanatory sentence. The excluded legacy PNG remains absent.
+
+Pre-entry sound now exposes mute, volume down, current level, and volume up with bilingual labels, native keyboard controls, focus treatment, and persisted bounded preferences. Page load, language changes, focus, and profile navigation never start playback; only a deliberate unmute or volume action may start the existing audio manager. Audio stays optional and does not touch microphone, Realtime, evaluation, or progress APIs.
+
+Final entry-revision build artifacts: page `page-2VFtYyd6.js` 11,492 / 3,639 / 3,318 B, bootstrap `main-C4Mvsigy.js` 6,563 / 2,251 / 1,958 B, runtime `runtime-EDjW847R.js` 724,697 / 186,635 / 153,800 B raw/gzip/Brotli. Against immediate baseline, combined initial page + bootstrap falls from 21,920 / 7,706 / 6,749 B to 18,055 / 5,890 / 5,276 B. Runtime remains post-profile and changes by only +35 B raw.
+
+Focused RED/GREEN evidence and decisions live in [entry city/audio review](reviews/2026-08-20-entry-city-audio-review.md). Managed sandbox denied localhost binding with `EPERM`, so exact browser matrix 360×640, 390×844, 1280×720, and 1920×1080 remains an explicit integration handoff rather than a claimed validation.
+
 ## Future open-source contribution checklist
 
 - [x] Add `SECURITY.md` with supported versions, private reporting channel, provider-spend threat model, and response expectations.
