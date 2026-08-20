@@ -150,6 +150,34 @@ describe("createEvaluatePost", () => {
     await expect(response.json()).resolves.toEqual(validMissionResult);
   });
 
+  it("does not trust browser-claimed criteria or choice", async () => {
+    let received: EvaluateMissionRequest | undefined;
+    const post = createEvaluatePost({
+      evaluate: async () => validResult,
+      evaluateMission: async (missionRequest) => {
+        received = missionRequest;
+        return validMissionResult;
+      },
+    });
+
+    const response = await post(request(JSON.stringify({
+      ...validMissionRequest,
+      satisfiedCriteria: [
+        "housing_goal_clear",
+        "housing_capacity_defined",
+        "housing_budget_defined",
+        "housing_accessibility_defined",
+        "housing_green_space_defined",
+        "housing_path_selected",
+      ],
+      selectedChoice: "balanced_housing",
+    })));
+
+    expect(response.status).toBe(200);
+    expect(received?.satisfiedCriteria).toEqual([]);
+    expect(received?.selectedChoice).toBeUndefined();
+  });
+
   it("sanitizes malformed mission evaluator output", async () => {
     const post = createEvaluatePost({
       evaluate: async () => validResult,

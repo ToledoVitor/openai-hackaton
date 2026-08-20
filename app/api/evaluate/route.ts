@@ -108,8 +108,13 @@ export function createEvaluatePost(dependencies: {
       if (!dependencies.evaluateMission) return json(missionError("internal_error"), 503);
 
       try {
+        const authoritativeRequest: EvaluateMissionRequest = {
+          ...parsed.data,
+          satisfiedCriteria: [],
+        };
+        delete authoritativeRequest.selectedChoice;
         const result = evaluateMissionResponseSchema.parse(
-          await dependencies.evaluateMission(parsed.data),
+          await dependencies.evaluateMission(authoritativeRequest),
         );
         return json(result, 200, "no-store");
       } catch (error) {

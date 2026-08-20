@@ -34,7 +34,7 @@ describe("connected learning mission evaluation", () => {
       expectedChoice: "mobility_then_sanitation",
       expectedEffect: "urban_repaired",
     },
-  ])("completes $missionId through deterministic fallback when provider extraction fails", async (fixture) => {
+  ])("fails closed for $missionId when provider extraction fails", async (fixture) => {
     const request = evaluateMissionRequestSchema.parse({
       missionId: fixture.missionId,
       stepId: fixture.stepId,
@@ -51,9 +51,10 @@ describe("connected learning mission evaluation", () => {
     });
 
     expect(result.source).toBe("fallback");
-    expect(result.status).toBe("success");
+    expect(result.status).toBe("retry");
     expect(result.choice).toBe(fixture.expectedChoice);
-    expect(result.effectKeys).toContain(fixture.expectedEffect);
+    expect(result.effectKeys).toEqual(["evaluation_unavailable_no_change"]);
+    expect(result.effectKeys).not.toContain(fixture.expectedEffect);
     expect(() => evaluateMissionResponseSchema.parse(result)).not.toThrow();
   });
 
@@ -73,8 +74,9 @@ describe("connected learning mission evaluation", () => {
       extraction: { extractMission: async () => Promise.reject(new Error("request timed out")) },
     });
 
-    expect(result.status).toBe("partial");
+    expect(result.status).toBe("retry");
     expect(result.progress.missing.length).toBeGreaterThan(0);
+    expect(result.effectKeys).toEqual(["evaluation_unavailable_no_change"]);
     expect(result.effectKeys).not.toContain("housing_complete");
   });
 });
