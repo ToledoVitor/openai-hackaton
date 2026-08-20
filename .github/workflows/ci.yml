@@ -1,0 +1,46 @@
+name: Offline CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: "true"
+  OPENAI_API_KEY: ""
+  OPENAI_ORG_ID: ""
+  OPENAI_PROJECT_ID: ""
+  NEXT_PUBLIC_OPENAI_API_KEY: ""
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Prove provider credentials absent
+        run: |
+          test -z "${OPENAI_API_KEY}"
+          test -z "${OPENAI_ORG_ID}"
+          test -z "${OPENAI_PROJECT_ID}"
+          test -z "${NEXT_PUBLIC_OPENAI_API_KEY}"
+      - name: Offline deterministic tests
+        run: npm test
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Production build
+        run: npm run build
