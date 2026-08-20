@@ -36,6 +36,7 @@ export const MISSION_STEPS: Readonly<Record<MissionId, readonly MissionStepId[]>
   apartment_construction: ["plan"],
   hospital_construction: ["prioritize"],
   urban_repair: ["diagnose"],
+  school_construction: ["design"],
 };
 
 export const MISSION_PATHS: Readonly<Record<MissionId, readonly string[]>> = {
@@ -46,6 +47,7 @@ export const MISSION_PATHS: Readonly<Record<MissionId, readonly string[]>> = {
   apartment_construction: ["balanced_housing"],
   hospital_construction: ["emergency_ready"],
   urban_repair: ["mobility_then_sanitation", "sanitation_then_mobility"],
+  school_construction: ["school_hub", "school_greenway"],
 };
 
 export const effectKeys = [
@@ -72,6 +74,7 @@ export const effectKeys = [
   "housing_plan_incomplete", "housing_complete",
   "hospital_plan_incomplete", "hospital_complete",
   "urban_diagnosis_incomplete", "urban_repaired",
+  "school_construction_incomplete", "school_construction_complete",
 ] as const;
 export type EffectKey = (typeof effectKeys)[number];
 
@@ -202,6 +205,7 @@ export const evaluateMissionResponseSchema = z.object({
   progress: z.object({
     satisfied: z.array(z.string()),
     newlySatisfied: z.array(z.string()),
+    regressed: z.array(z.string()),
     missing: z.array(z.string()),
   }).strict(),
   teachingConcept: z.string().min(1),

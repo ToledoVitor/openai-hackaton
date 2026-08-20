@@ -16,6 +16,7 @@ function sameFailureEffect(criteria: readonly string[], effect: EffectKey): Reco
 const housing = getLearningMission("apartment_construction");
 const hospital = getLearningMission("hospital_construction");
 const urbanRepair = getLearningMission("urban_repair");
+const schoolConstruction = getLearningMission("school_construction");
 
 export const missionDefinitions: Readonly<Record<MissionId, MissionDefinition>> = {
   new_school: {
@@ -264,6 +265,30 @@ export const missionDefinitions: Readonly<Record<MissionId, MissionDefinition>> 
     successEffectByPath: {
       mobility_then_sanitation: "urban_repaired",
       sanitation_then_mobility: "urban_repaired",
+    },
+  },
+  school_construction: {
+    id: "school_construction",
+    steps: MISSION_STEPS.school_construction,
+    paths: MISSION_PATHS.school_construction,
+    criteria: schoolConstruction.criteria,
+    criteriaByStep: { design: schoolConstruction.criteria },
+    choiceCriterion: "school_site_selected",
+    teachingConcept: {
+      portuguese: schoolConstruction.copy.portuguese.concept,
+      english: schoolConstruction.copy.english.concept,
+    },
+    instructions: {
+      portuguese: `${commonInstructions.portuguese} Detecte escola pública, estudantes e famílias, localização, salas ou capacidade, porta acessível, segurança e escolha entre polo escolar ou corredor verde.`,
+      english: `${commonInstructions.english} Detect a public school, students and families, location, classrooms or capacity, accessible door, safety, and a choice between the school hub or greenway.`,
+    },
+    failureEffectByCriterion: sameFailureEffect(
+      schoolConstruction.criteria,
+      "school_construction_incomplete",
+    ),
+    successEffectByPath: {
+      school_hub: "school_construction_complete",
+      school_greenway: "school_construction_complete",
     },
   },
 };
