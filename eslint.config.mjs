@@ -8,6 +8,7 @@ export default defineConfig([
   ...fixupConfigRules(nextTypeScript),
   globalIgnores([
     ".next/**",
+    ".worktrees/**",
     ".vinext/**",
     ".wrangler/**",
     "dist/**",
