@@ -12,7 +12,7 @@ Before Apache-2.0 adoption, repository was distributed under MIT with copyright 
 - Quaternius Ultimate Modular Males — CC0 1.0; `public/assets/3d/cidade/LICENSE-quaternius-men.txt`.
 - OpenGameArt audio — CC0 1.0; per-file source and hash at `public/audio/SOURCES.md`.
 
-Legacy unverified logo media is excluded from current distribution. No rights are asserted over excluded file; see `ATTRIBUTIONS.md`.
+Legacy unverified logo media is excluded from current tree and current-tag source archives. Historical Git revisions predate exclusion and are not release artifacts. No rights are asserted over excluded file; see `ATTRIBUTIONS.md`.
 
 This project includes the following audio-encoding dependencies.
 

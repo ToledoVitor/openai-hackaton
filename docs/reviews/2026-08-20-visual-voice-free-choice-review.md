@@ -13,7 +13,7 @@ Players needed immediate agency, clearer entry/loading truth, a lived-in city, a
 - Receipt contains unique canonical mission set; client cannot add completion or criteria.
 - NPC acknowledgement, budget, city effects, and completion count derive from actual completed IDs.
 - Text remains primary. Voice module, microphone, and ephemeral secret require deliberate action; permission denial creates no provider request.
-- Existing media unchanged; new streetscape uses documented CC0 clones and procedural geometry/instancing only.
+- Audited CC0 media remains unchanged; unverified legacy logo is deliberately excluded and replaced with source-authored HTML/CSS wordmark. New streetscape uses documented CC0 clones and procedural geometry/instancing only.
 - Entry remains initial lightweight boundary; Three.js loads after profile, Realtime after voice action.
 - Automated tests unset OpenAI credentials and block OpenAI hosts.
 
@@ -30,4 +30,4 @@ Players needed immediate agency, clearer entry/loading truth, a lived-in city, a
 - Signed receipt is stateless; replaying older valid receipt can roll same installation back to signed subset, never forward/forge completion. Server storage would be needed for monotonic cross-device history.
 - Live microphone, Realtime, and provider quality remain manual-only.
 - Post-entry Three.js runtime remains large and needs device profiling before deeper split.
-- Legacy AI City logo was excluded from current distribution and replaced with source-authored HTML/CSS wordmark. No rights claim is made over excluded PNG; provenance blocker is closed by deletion.
+- Legacy AI City logo was excluded from current tree/current-tag source archives and replaced with source-authored HTML/CSS wordmark. Historical Git revisions predate exclusion and are not release artifacts. No rights claim is made over excluded PNG; provenance blocker is closed for current source release by deletion.

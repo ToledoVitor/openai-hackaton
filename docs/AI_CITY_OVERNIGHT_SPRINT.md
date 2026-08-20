@@ -69,7 +69,7 @@ TDD evidence: unresolved entry test failed against previous DOM-eager module, th
 - Added README, contribution guide, Contributor Covenant policy, security policy, templates, offline CI, Dependabot, NOTICE, and expanded third-party notices.
 - CI explicitly empties OpenAI credential variables before install/test/typecheck/lint/build. Vitest global guard remains release-blocking protection against OpenAI host traffic.
 - KayKit city assets, Quaternius characters, and OpenGameArt audio have bundled CC0 evidence.
-- Legacy `public/assets/brand/ai-city-logo.png` had no authoritative source or license evidence, so it was deleted from current distribution and replaced with source-authored HTML/CSS wordmark. No origin, ownership, or generation claim is made about excluded file. Logo-provenance release blocker is closed by exclusion.
+- Legacy `public/assets/brand/ai-city-logo.png` had no authoritative source or license evidence, so it was deleted from current tree/current-tag source archives and replaced with source-authored HTML/CSS wordmark. Historical Git revisions predate exclusion and are not release artifacts. No origin, ownership, or generation claim is made about excluded file. Logo-provenance release blocker is closed for current source release by exclusion.
 
 ## Remaining risks
 
