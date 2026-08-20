@@ -130,7 +130,48 @@ button { font: inherit; }
   padding: 8px 14px;
 }
 
-.marca-logo { width: 118px; height: 46px; }
+.brand-wordmark {
+  display: inline-flex;
+  position: relative;
+  isolation: isolate;
+  align-items: flex-end;
+  color: #f4bd45;
+  font-size: 44px;
+  font-weight: 950;
+  line-height: .78;
+  letter-spacing: -.08em;
+  filter: drop-shadow(0 .18em .14em rgba(56, 43, 25, .2));
+  user-select: none;
+}
+
+.brand-wordmark__ai {
+  position: relative;
+  z-index: 2;
+  margin-right: -.3em;
+  padding: .22em .25em .18em;
+  border: .06em solid rgba(255, 255, 255, .7);
+  border-radius: .42em .42em .34em .34em;
+  color: #fffdf7;
+  background: linear-gradient(145deg, #25a99a, #126f68);
+  box-shadow: 0 .08em 0 #0b5753, 0 .14em .2em rgba(24, 73, 68, .24);
+  font-size: .36em;
+  letter-spacing: -.03em;
+  line-height: 1;
+  transform: translateY(-1.35em) rotate(-6deg);
+}
+
+.brand-wordmark__city {
+  color: #f6c956;
+  -webkit-text-stroke: .055em #5c3c20;
+  paint-order: stroke fill;
+  text-shadow: 0 .075em 0 #d98c2c, 0 .135em 0 #70451f, 0 .19em .24em rgba(59, 42, 21, .28);
+}
+
+.brand-wordmark--header {
+  flex: 0 0 auto;
+  margin: 0 8px 0 4px;
+  font-size: 43px;
+}
 .seletor-idioma { display: flex; gap: 4px; margin-left: auto; padding: 4px; border-radius: 12px; background: #e7f1ed; }
 .seletor-idioma button,
 .entrada-idioma button {
@@ -254,7 +295,6 @@ button:disabled { transform: none !important; }
 
 @media (max-width: 760px) {
   .barra-superior { gap: 7px; }
-  .marca-logo { width: 74px; height: 38px; }
   .seletor-idioma button { min-height: 44px; padding: 6px; font-size: 8px; }
   .audio-toggle { min-width: 44px; min-height: 44px; justify-content: center; }
   .audio-toggle { font-size: 0; }
@@ -360,16 +400,13 @@ button:disabled { transform: none !important; }
   white-space: nowrap;
 }
 
-.entrada-logo {
+.brand-wordmark--hero {
   position: absolute;
-  top: clamp(32px, 6vh, 72px);
+  top: clamp(58px, 8vh, 88px);
   left: 50%;
-  width: min(470px, 64vw);
-  max-height: 40vh;
-  object-fit: contain;
-  filter: drop-shadow(0 24px 18px rgba(59, 43, 19, .24));
+  font-size: clamp(96px, 12vw, 146px);
   transform: translateX(-50%);
-  animation: logo-flutuar 3.8s ease-in-out infinite;
+  animation: wordmark-flutuar 3.8s ease-in-out infinite;
 }
 
 .entrada-convite {
@@ -425,9 +462,9 @@ button:disabled { transform: none !important; }
   transition: opacity .4s ease .1s, transform .55s cubic-bezier(.2,.8,.2,1) .05s;
 }
 
-.entrada-logo-menor {
-  width: min(590px, 52vw);
-  filter: drop-shadow(0 22px 18px rgba(59, 43, 19, .22));
+.brand-wordmark--profile {
+  justify-self: center;
+  font-size: clamp(88px, 10vw, 128px);
 }
 
 .entrada-cartao {
@@ -498,17 +535,17 @@ button:disabled { transform: none !important; }
 .entrada-ativa #cidade { cursor: default; filter: saturate(1.12) brightness(1.04); transform: scale(1.015); }
 
 @keyframes entrada-aparecer { from { opacity: 0; } }
-@keyframes logo-flutuar { 50% { transform: translate(-50%, -7px) rotate(-.3deg); } }
+@keyframes wordmark-flutuar { 50% { transform: translate(-50%, -7px) rotate(-.3deg); } }
 
 @media (max-width: 760px) {
   .entrada-inicio { padding: 0 14px; }
   .entrada-chamada { top: 31vh; font-size: 9px; letter-spacing: 1.1px; }
-  .entrada-logo { top: clamp(44px, 8vh, 74px); width: min(460px, 88vw); max-height: 36vh; }
+  .brand-wordmark--hero { top: clamp(58px, 9vh, 80px); font-size: clamp(78px, 25vw, 104px); }
   .entrada-convite { bottom: clamp(42px, 7vh, 68px); width: calc(100% - 28px); }
   .entrada-comecar { min-width: min(300px, 86vw); }
   .entrada-convite p { max-width: 300px; }
   .entrada-perfil { grid-template-columns: 1fr; align-content: center; gap: 4px; width: min(430px, calc(100% - 24px)); }
-  .entrada-logo-menor { width: min(340px, 82vw); margin: 0 auto -18px; }
+  .brand-wordmark--profile { margin: 0 auto 28px; font-size: clamp(72px, 23vw, 94px); }
   .entrada-cartao { padding: 24px 20px 20px; border-radius: 24px; }
   .entrada-cartao h1 { font-size: 28px; }
   .entrada-versao { right: 50%; transform: translateX(50%); white-space: nowrap; }
@@ -520,14 +557,6 @@ button:disabled { transform: none !important; }
 
 /* Guia conversacional da primeira missão */
 .marca { min-width: 148px; }
-.marca-logo {
-  display: block;
-  width: 126px;
-  height: 52px;
-  object-fit: contain;
-  object-position: left center;
-}
-
 .barra-superior {
   overflow: hidden;
 }
@@ -901,7 +930,7 @@ button:disabled { transform: none !important; }
 }
 
 @media (max-width: 760px) {
-  .marca-logo { width: 82px; height: 39px; }
+  .brand-wordmark--header { margin-right: 0; font-size: 34px; }
   .indicadores div { min-width: 88px; }
   .indicadores div:nth-child(2), .indicadores div:nth-child(3) { display: none; }
   .audio-toggle { padding: 7px 9px; font-size: 10px; }

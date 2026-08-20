@@ -1,8 +1,7 @@
 import { getStoredLanguage, LANGUAGE_CHANGE_EVENT, setPlayerLanguage } from '../client/language';
+import { brandWordmarkMarkup } from '../client/brand-wordmark';
 import { uiText } from '../client/ui-copy';
 import type { Language } from '../domain/mission-contracts';
-
-const LOGO = '/assets/brand/ai-city-logo.png';
 
 export type PlayerProfile = { name: string; language: Language };
 
@@ -21,7 +20,7 @@ export function mostrarEntrada() {
         <button type="button" data-language="english">English</button>
       </div>
       <div class="entrada-inicio">
-        <img class="entrada-logo" src="${LOGO}" alt="AI City" />
+        ${brandWordmarkMarkup('hero')}
         <div class="entrada-convite">
           <button class="entrada-comecar" type="button">
             <span data-copy="start"></span>
@@ -31,7 +30,7 @@ export function mostrarEntrada() {
         </div>
       </div>
       <form class="entrada-perfil" autocomplete="off">
-        <img class="entrada-logo-menor" src="${LOGO}" alt="AI City" />
+        ${brandWordmarkMarkup('profile')}
         <div class="entrada-cartao">
           <span class="entrada-etiqueta" data-copy="before_start"></span>
           <h1 data-copy="name_question"></h1>

@@ -39,7 +39,7 @@ Vitest loads `tests/offline-openai-guard.ts` before every suite. Guard deletes `
 
 ## Validation record
 
-- Automated tests: 243 passing across 43 files at visual/free-choice final gate; global offline guard loaded for every suite.
+- Automated tests: 246 passing across 44 files at logo-exclusion final gate; global offline guard loaded for every suite.
 - TypeScript: strict typecheck passes.
 - ESLint: passes with zero warnings.
 - Production build: passes.
@@ -59,9 +59,9 @@ Production Vinext build chunk graph before split loaded page chunk then imported
 | Three.js/game runtime | included above | 722,140 / 185,882 / 153,025 B | After valid profile submit |
 | Page + game entry | 771,738 / 202,298 / 168,011 B | 50,809 / 17,174 / 15,382 B | Initial app-specific path |
 
-Final review build drops initial app-specific path by 719,000 B raw, 184,543 B gzip, and 152,139 B Brotli (93.2%, 91.2%, 90.6%). Shared framework/Vinext chunks are unchanged. Visual/free-choice final artifacts are `page-C2113zLF.js` 48,189 / 16,023 / 14,405 B, `main-BUdhgNgp.js` 4,549 / 1,732 / 1,467 B, and `runtime-BLFB8z4l.js` 724,662 / 186,615 / 153,729 B raw/gzip/Brotli. Initial page + bootstrap is 52,738 / 17,755 / 15,872 B: +1,929 / +581 / +490 B versus bundle-phase final for bilingual purpose/voice shell and free-choice UI. Realtime is separate `realtime-8vPxnobN.js` 4,386 / 1,872 / 1,619 B and loads only after explicit voice action. Three.js remains post-entry; deeper runtime split remains future measured work.
+Logo-exclusion build drops initial app-specific path by 749,818 B raw, 194,592 B gzip, and 161,247 B Brotli (97.2%, 96.2%, 96.0%). Shared framework/Vinext chunks are unchanged. Final-gate artifacts are `page-DywdXMUs.js` 17,488 / 6,013 / 5,326 B, `main-CI8vdQwJ.js` 4,432 / 1,693 / 1,438 B, and `runtime-C8fHDEu8.js` 724,662 / 186,618 / 153,653 B raw/gzip/Brotli. Initial page + bootstrap is 21,920 / 7,706 / 6,764 B: 28,889 / 9,468 / 8,618 B smaller than bundle-phase final because source wordmark removes image-component client code. Realtime remains separate `realtime-DisIGH9N.js` 4,386 / 1,871 / 1,618 B and loads only after explicit voice action. Three.js remains post-entry; deeper runtime split remains future measured work.
 
-TDD evidence: unresolved entry test failed against previous DOM-eager module, then passed with deferred loader; exact-profile test failed with zero `runtime.start` calls, then passed after profile handoff. Post-review failure-state test failed before renderer existed, then passed with active-language error copy, stopped spinner, and explicit reload action. Desktop browser showed entry before runtime/API, immediate English switch, then first mission/city after submit.
+TDD evidence: unresolved entry test failed against previous DOM-eager module, then passed with deferred loader; exact-profile test failed with zero `runtime.start` calls, then passed after profile handoff. Post-review failure-state test failed before renderer existed, then passed with active-language error copy, stopped spinner, and explicit reload action. Wordmark tests failed first for missing source component and retained PNG, then passed after accessible markup replacement and asset deletion. Desktop/mobile browser showed entry before runtime/API, readable profile/header wordmarks, immediate language switch, then city after submit.
 
 ## Open-source readiness
 
@@ -69,7 +69,7 @@ TDD evidence: unresolved entry test failed against previous DOM-eager module, th
 - Added README, contribution guide, Contributor Covenant policy, security policy, templates, offline CI, Dependabot, NOTICE, and expanded third-party notices.
 - CI explicitly empties OpenAI credential variables before install/test/typecheck/lint/build. Vitest global guard remains release-blocking protection against OpenAI host traffic.
 - KayKit city assets, Quaternius characters, and OpenGameArt audio have bundled CC0 evidence.
-- `public/assets/brand/ai-city-logo.png` has no authoritative source or license evidence. **Public release remains legally blocked until logo is replaced/excluded or rights are documented.** Apache-2.0 does not cover it, and no Google-generation or ownership claim is made.
+- Legacy `public/assets/brand/ai-city-logo.png` had no authoritative source or license evidence, so it was deleted from current distribution and replaced with source-authored HTML/CSS wordmark. No origin, ownership, or generation claim is made about excluded file. Logo-provenance release blocker is closed by exclusion.
 
 ## Remaining risks
 
@@ -89,5 +89,5 @@ TDD evidence: unresolved entry test failed against previous DOM-eager module, th
 - [ ] Add enforceable performance budgets and profile safe post-entry runtime sub-splits.
 - [ ] Add human accessibility review with screen reader, reduced motion, contrast, keyboard, and touch devices.
 - [ ] Add contributor guidance for bilingual copy completeness and mission metadata changes.
-- [x] Add explicit licenses/attribution index and mark unresolved logo as release blocker.
-- [ ] Replace/exclude unresolved logo or obtain authoritative written distribution rights before public release.
+- [x] Add explicit licenses/attribution index and document legacy logo exclusion.
+- [x] Replace unresolved logo with source-authored HTML/CSS wordmark and delete unlicensed media.

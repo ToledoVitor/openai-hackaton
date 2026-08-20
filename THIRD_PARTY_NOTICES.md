@@ -11,7 +11,8 @@ Before Apache-2.0 adoption, repository was distributed under MIT with copyright 
 - KayKit City Builder Bits 1.0 — CC0 1.0; `public/assets/3d/cidade/LICENSE-kaykit-city-builder.txt`.
 - Quaternius Ultimate Modular Males — CC0 1.0; `public/assets/3d/cidade/LICENSE-quaternius-men.txt`.
 - OpenGameArt audio — CC0 1.0; per-file source and hash at `public/audio/SOURCES.md`.
-- AI City logo — unresolved provenance; not licensed by this notice. See `ATTRIBUTIONS.md`.
+
+Legacy unverified logo media is excluded from current distribution. No rights are asserted over excluded file; see `ATTRIBUTIONS.md`.
 
 This project includes the following audio-encoding dependencies.
 

@@ -1,8 +1,8 @@
 'use client';
 
-import Image from 'next/image';
 import { memo, useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { createAudioManager, DEFAULT_AUDIO_PREFERENCES, type AudioPreferences } from '@/src/audio';
+import { BrandWordmark } from '@/src/client/brand-wordmark';
 import { getStoredLanguage, LANGUAGE_CHANGE_EVENT, setPlayerLanguage } from '@/src/client/language';
 import { uiText } from '@/src/client/ui-copy';
 import type { Language } from '@/src/domain/mission-contracts';
@@ -172,7 +172,7 @@ export default function HomePage() {
     <main id="app">
       <GameUi />
       <header className="barra-superior">
-        <Image className="marca-logo" src="/assets/brand/ai-city-logo.png" alt="AI City" width={160} height={48} priority unoptimized />
+        <BrandWordmark variant="header" />
         <div className="seletor-idioma" role="group" aria-label={uiText(language, 'language_label')}>
           {(['portuguese', 'english'] as const).map((option) => (
             <button key={option} type="button" aria-pressed={language === option} onClick={() => setPlayerLanguage(option)}>

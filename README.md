@@ -6,9 +6,9 @@ Journey: language and name → explorable city → player-chosen housing, hospit
 
 ## Current release status
 
-Code is prepared under Apache-2.0. Bundled CC0 city models and audio have source/license records. `public/assets/brand/ai-city-logo.png` has no authoritative source or distribution-license record in repository history; public source releases must exclude/replace it or obtain written rights first. See [ATTRIBUTIONS.md](ATTRIBUTIONS.md).
+Code is prepared under Apache-2.0. Bundled CC0 city models and audio have source/license records. Current branding is a source-authored HTML/CSS wordmark. Legacy logo PNG was excluded from distribution because repository history contained no authoritative rights evidence; this project retains no copy and asserts no rights over it. See [ATTRIBUTIONS.md](ATTRIBUTIONS.md).
 
-No screenshot is embedded because repository does not yet contain one with confirmed redistribution rights.
+No screenshot is bundled; release contains only audited media listed in [ATTRIBUTIONS.md](ATTRIBUTIONS.md).
 
 ## Local setup
 
